@@ -9,7 +9,7 @@ import "@fontsource-variable/noto-sans-sc";
 import { loadWords } from "./data";
 import { graph, initial, schedule } from "./logic";
 import {
-  actionForEvent,
+  bindShortcutListener,
   defaultKeymap,
   displayKey,
   keymapConflicts,
@@ -382,34 +382,36 @@ function undoLastRating() {
   render();
 }
 
-window.addEventListener("keydown", (event) => {
-  if (event.target instanceof HTMLInputElement) return;
-  const action = actionForEvent(keymap, event.key, event.code);
-  if (!action) return;
-  event.preventDefault();
-  if (action === "reveal") {
-    shown = !shown;
-    return render();
-  }
-  const ratings = { forgot: 0, hard: 1, good: 2, easy: 3 } as const;
-  if (action in ratings) {
-    const word = dueWords()[0];
-    if (word) applyRating(word.id, ratings[action as keyof typeof ratings]);
-    return;
-  }
-  if (action === "undo") return undoLastRating();
-  const routes: Partial<Record<Action, Route>> = {
-    study: "study",
-    history: "history",
-    graph: "graph",
-    stats: "stats",
-    data: "data",
-    docs: "docs",
-  };
-  if (routes[action]) {
-    route = routes[action]!;
-    render();
-  }
-});
+bindShortcutListener(
+  window,
+  () => keymap,
+  (action, event) => {
+    if (event.target instanceof HTMLInputElement) return;
+    event.preventDefault();
+    if (action === "reveal") {
+      shown = !shown;
+      return render();
+    }
+    const ratings = { forgot: 0, hard: 1, good: 2, easy: 3 } as const;
+    if (action in ratings) {
+      const word = dueWords()[0];
+      if (word) applyRating(word.id, ratings[action as keyof typeof ratings]);
+      return;
+    }
+    if (action === "undo") return undoLastRating();
+    const routes: Partial<Record<Action, Route>> = {
+      study: "study",
+      history: "history",
+      graph: "graph",
+      stats: "stats",
+      data: "data",
+      docs: "docs",
+    };
+    if (routes[action]) {
+      route = routes[action]!;
+      render();
+    }
+  },
+);
 
 render();
