@@ -457,6 +457,21 @@ bindShortcutListener(
   },
 );
 
+// Capture-phase diagnostic — only active with ?debug, fires before any
+// other handler (or browser extension) can intercept the keydown event.
+document.addEventListener(
+  "keydown",
+  (e) => {
+    if (!(window as any).__LEXI_DEBUG__) return;
+    const bar = document.getElementById("lexi-key-debug");
+    if (!bar) return;
+    bar.style.display = "block";
+    bar.textContent = `[raw] key="${e.key}" code="${e.code}" target=${String(e.target?.constructor?.name ?? "?")}`;
+    bar.style.color = "#aaa";
+  },
+  { capture: true },
+);
+
 // One-time debug bar — lives outside #app so render() can't destroy it
 const debugBar = document.createElement("div");
 debugBar.id = "lexi-key-debug";

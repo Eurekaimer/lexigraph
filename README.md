@@ -44,6 +44,19 @@ Use npm run dev for frontend development.
 
 Physical key codes are used when available, so study controls continue to work while an input method is active. Mappings can be changed from the Data page.
 
+### Browser extensions
+
+Keyboard-centric browser extensions (Vimium, Tridactyl, Surfingkeys, cVim, and some
+translator or password-manager add-ons) may intercept the A / S / D keys before they
+reach the application.  If the keyboard controls stop responding after visiting a
+deployed page, **disable all extensions** for the site or test in an incognito window
+to rule out conflicts.  The problem does not affect `npm run dev` on localhost because
+most extensions are not active on HTTP origins.
+
+To debug, visit `…/?debug` — a status bar at the bottom of the page will show the
+raw `key` and `code` values for every keypress, making it easy to spot an extension
+that is swallowing events.
+
 ## Profiles and portability
 
 The local server writes progress to profiles/default.json. Profile files are excluded from Git. Use the Data page to export a portable JSON backup and import it on another computer.
