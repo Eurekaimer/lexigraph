@@ -2,12 +2,16 @@ import { expect, it } from "vitest";
 import { emptyState, normalizeState } from "./storage";
 it("returns an empty state for invalid input", () =>
   expect(normalizeState(null)).toEqual(emptyState()));
-it("repairs missing collections", () =>
-  expect(normalizeState({ reviews: {} })).toEqual({
+it("repairs missing collections and creates a study plan", () => {
+  const migrated = normalizeState({ reviews: {} });
+  expect(migrated).toMatchObject({
     reviews: {},
     mistakes: [],
     history: [],
-  }));
+    studyPlan: { extraGroups: {} },
+  });
+  expect(migrated.studyPlan?.targetDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+});
 it("preserves compatible history snapshots", () => {
   const value = {
     reviews: {},
