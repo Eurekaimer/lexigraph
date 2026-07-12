@@ -5,6 +5,10 @@ export type SearchResult = {
   score: number;
   reason: "exact" | "prefix" | "contains" | "fuzzy";
 };
+/**
+ * Ranks exact, prefix, substring, then edit-distance matches.
+ * Kept as a pure function so a BK-tree or worker-backed index can replace it.
+ */
 export function searchWords(
   words: Word[],
   rawQuery: string,
@@ -20,13 +24,13 @@ export function searchWords(
       if (value.startsWith(query))
         return {
           word,
-        score: 80 - (value.length - query.length),
+          score: 80 - (value.length - query.length),
           reason: "prefix" as const,
         };
       if (value.includes(query))
         return {
           word,
-        score: 60 - (value.length - query.length),
+          score: 60 - (value.length - query.length),
           reason: "contains" as const,
         };
       const editDistance =
