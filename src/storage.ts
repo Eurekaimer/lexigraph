@@ -1,4 +1,5 @@
 import type { Keymap, State } from "./types";
+import { defaultStudyPlan } from "./plan";
 
 /** Persistence boundary shared by browser and local-file modes. */
 export interface StorageAdapter {
@@ -11,6 +12,7 @@ export const emptyState = (): State => ({
   reviews: {},
   mistakes: [],
   history: [],
+  studyPlan: defaultStudyPlan(),
 });
 
 /** Migrates partial or legacy JSON into the current state shape. */
@@ -22,6 +24,9 @@ export function normalizeState(value: unknown): State {
       state.reviews && typeof state.reviews === "object" ? state.reviews : {},
     mistakes: Array.isArray(state.mistakes) ? state.mistakes : [],
     history: Array.isArray(state.history) ? state.history : [],
+    studyPlan: state.studyPlan?.targetDate
+      ? state.studyPlan
+      : defaultStudyPlan(),
   };
 }
 
