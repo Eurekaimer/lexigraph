@@ -1,66 +1,65 @@
 # Lexigraph
 
-桌面优先、离线优先的考研英语词汇复习工具。它将单词视为节点，将拼写相似与真实误认记录建模为个性化易混词网络。
+Lexigraph is a local-first vocabulary trainer for the English section of China's postgraduate entrance examination. It combines spaced review, keyboard-driven study, personal statistics, and a confusion graph for visually similar words.
 
-## 使用方式
+Try the public demo at [eurekaimer.icu/lexigraph](https://www.eurekaimer.icu/lexigraph/).
 
-公开 Pages 仅用于演示。访问者的数据保存在自己的浏览器中，不能修改仓库。
+## Features
 
-个人使用推荐 clone 后运行：
+- 5,530 syllabus words ordered by corpus frequency
+- Four-level recall feedback and interval scheduling
+- Keyboard-first study with customizable mappings
+- Local JSON profiles with import and export
+- Personal review statistics
+- A confusion network based on spelling similarity and mistake history
+- Optional Anki-compatible TSV export
+- Offline-capable PWA demo
 
+## Quick start
+
+Node.js 22 or later is required.
+
+    git clone https://github.com/Eurekaimer/lexigraph.git
+    cd lexigraph
     npm install
     npm run local
 
-然后打开 http://127.0.0.1:4173。本地服务只监听本机，并自动读写被 Git 忽略的 profiles/default.json。Windows、Linux 和 macOS 使用相同命令，不需要 EXE。
+Open [http://127.0.0.1:4173](http://127.0.0.1:4173). Progress is saved automatically to profiles/default.json.
 
-## 功能
+Use npm run dev for frontend development.
 
-- 5530 个考研英语（一）大纲词汇，按词频排列
-- 四级复习反馈与默认 WASD 键盘流
-- 可自定义的 Action–Key 映射
-- JSON 自动保存、导入和导出
-- 基于遗忘与误认记录的易混词网络
-- 近 14 天复习量、回忆成功率和遗忘次数
-- 默认关闭的 Anki TSV 导出适配器
-- 站内使用文档、记忆曲线与发布工作流说明
+## Keyboard controls
 
-## 默认键位
-
-| 操作 | 键 |
+| Action | Default key |
 | --- | --- |
-| 显示释义 | Space |
-| 完全忘记 | A |
-| 回忆困难 | S |
-| 正常掌握 | D |
-| 非常熟练 | W |
-| 学习 / 易混词 / 统计 / 数据 / 文档 | 1 / 2 / 3 / 4 / 5 |
+| Show or hide the answer | Space |
+| Completely forgotten | A |
+| Recalled with difficulty | S |
+| Recalled normally | D |
+| Recalled immediately | W |
+| Study / Graph / Statistics / Data / Docs | 1–5 |
 
-## 数据迁移
+Physical key codes are used when available, so study controls continue to work while an input method is active. Mappings can be changed from the Data page.
 
-在“数据与接口”页导出 lexigraph-profile.json，通过任意文件传输工具发送到另一台电脑，再执行导入。个人 JSON 默认不会提交到 Git。
+## Profiles and portability
 
-Anki 默认关闭。启用后导出 UTF-8 TSV，在 Anki 中选择制表符分隔导入。该适配器只导出至少学习过一次的单词。
+The local server writes progress to profiles/default.json. Profile files are excluded from Git. Use the Data page to export a portable JSON backup and import it on another computer.
 
-## 开发与验证
+The public demo stores progress in the visitor's browser and has no permission to change this repository.
+
+## Anki
+
+Anki export is disabled by default. Enable it on the Data page to export studied words as a UTF-8, tab-separated file. Import the file into Anki using the tab separator.
+
+## Development
 
     npm test
     npm run build
 
-词库可复现生成：
+The main extension points are StorageAdapter for persistence, ExportAdapter for output formats, and Keymap for input bindings. Scheduling, graph construction, and statistics remain independent modules.
 
-    node scripts/build-vocabulary.mjs /path/to/netem_full_list.json
+The vocabulary build is reproducible and pinned to a specific upstream revision. Run npm run prebuild to prepare the dataset.
 
-## 模块边界
+## Data and license
 
-- logic.ts：复习调度与易混关系领域逻辑
-- storage.ts：StorageAdapter 及浏览器/本地文件适配
-- keymap.ts：可扩展 Action–Key 输入接口
-- export.ts：JSON 与 Anki ExportAdapter
-- stats.ts：纯统计计算
-- scripts/local-server.mjs：本地 JSON 边界
-
-领域逻辑不依赖浏览器、文件系统、Anki 或 GitHub Pages。
-
-## 词库许可
-
-词库来自 exam-data/NETEMVocabulary，数据采用 CC BY-NC-SA 4.0；应用代码采用 MIT License。
+Vocabulary data is derived from [exam-data/NETEMVocabulary](https://github.com/exam-data/NETEMVocabulary) under CC BY-NC-SA 4.0. Application code is licensed under MIT.
