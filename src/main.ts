@@ -186,20 +186,37 @@ function heatmapColor(count: number) {
   return "#216e39";
 }
 function statsView() {
-  const days = dailyReviews(state);
-  const cells = days
-    .map(
-      (day) => {
-        const color = heatmapColor(day.count);
-        return `<div class="heat-cell" title="${day.date}: ${day.count} 次复习" style="background:${color}"></div><small>${day.date.slice(3)}</small>`;
-      },
-    )
-    .join("");
+  const TOTAL = 84; // 12 weeks
+  const days = dailyReviews(state, TOTAL);
+  const countMap = new Map(days.map((d) => [d.key, d.count]));
+  const today = new Date();
+  const start = new Date(today);
+  start.setDate(start.getDate() - TOTAL + 1);
+  // Pad start back to Monday so the grid aligns to week boundaries
+  const padDays = (start.getDay() + 6) % 7; // days to reach Monday
+  const gridStart = new Date(start);
+  gridStart.setDate(gridStart.getDate() - padDays);
+  const WEEKS = Math.ceil((TOTAL + padDays) / 7);
+  let html = "";
+  for (let row = 0; row < 7; row++) {
+    for (let col = 0; col < WEEKS; col++) {
+      const d = new Date(gridStart);
+      d.setDate(d.getDate() + col * 7 + row);
+      const key = d.toISOString().slice(0, 10);
+      const count = countMap.get(key);
+      if (count === undefined) {
+        html += `<div class="heat-cell empty"></div>`;
+      } else {
+        const dateLabel = `${d.getMonth() + 1}月${d.getDate()}日`;
+        html += `<div class="heat-cell" style="background:${heatmapColor(count)}" title="${dateLabel}: ${count} 次复习"></div>`;
+      }
+    }
+  }
   const legend = [0, 1, 3, 8, 15].map((n) =>
     `<span class="heat-legend-swatch" style="background:${heatmapColor(n)}"></span>`,
   ).join("");
   return frame(
-    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>近 14 天复习量</h2><div class="heatmap">${cells}</div><div class="heat-legend">少 ${legend} 多</div></div>`,
+    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>近 12 周复习热力图</h2><div class="heatmap-grid">${html}</div><div class="heat-legend">少 ${legend} 多</div></div>`,
   );
 }
 
