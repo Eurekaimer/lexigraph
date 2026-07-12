@@ -11,6 +11,7 @@ Try the public demo at [eurekaimer.icu/lexigraph](https://www.eurekaimer.icu/lex
 - Keyboard-first study with customizable mappings
 - Local JSON profiles with import and export
 - Personal review statistics
+- Goal-based daily quotas with optional 20-word extra groups
 - A confusion network based on spelling similarity and mistake history
 - Optional Anki-compatible TSV export
 - Offline-capable PWA demo
