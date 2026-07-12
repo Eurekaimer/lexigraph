@@ -18,6 +18,12 @@ function seededSample<T>(items: T[], count: number, seed: string) {
   return copy.slice(0, count);
 }
 
+/**
+ * Builds a deterministic daily queue.
+ *
+ * Due reviews are interleaved with a fixed quota sampled from five frequency
+ * strata. The date is part of the seed, so reloading never changes today's set.
+ */
 export function buildStudyQueue(
   words: Word[],
   state: State,
