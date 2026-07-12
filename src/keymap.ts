@@ -32,15 +32,37 @@ export function actionForEvent(
   key: string,
   code = "",
 ): Action | undefined {
-  const physicalKey =
-    code === "Space"
-      ? " "
-      : /^Key[A-Z]$/.test(code)
-        ? code.slice(3).toLowerCase()
-        : /^Digit[0-9]$/.test(code)
-          ? code.slice(5)
-          : "";
-  return actionForKey(keymap, physicalKey || key) ?? actionForKey(keymap, key);
+  const physicalMatch = (Object.keys(keymap) as Action[]).find(
+    (action) => bindingToCode(keymap[action]) === code,
+  );
+  return physicalMatch ?? actionForKey(keymap, key);
+}
+
+/** Converts a user-facing binding into a layout-independent KeyboardEvent.code. */
+export function bindingToCode(binding: string) {
+  const key = normalizeKey(binding);
+  if (key === " ") return "Space";
+  if (/^[a-z]$/.test(key)) return `Key${key.toUpperCase()}`;
+  if (/^[0-9]$/.test(key)) return `Digit${key}`;
+  return undefined;
+}
+
+/**
+ * Binds the same DOM event path used by the application and by integration
+ * tests. The returned function removes the listener.
+ */
+export function bindShortcutListener(
+  target: EventTarget,
+  getKeymap: () => Keymap,
+  handler: (action: Action, event: KeyboardEvent) => void,
+) {
+  const listener = (rawEvent: Event) => {
+    const event = rawEvent as KeyboardEvent;
+    const action = actionForEvent(getKeymap(), event.key, event.code);
+    if (action) handler(action, event);
+  };
+  target.addEventListener("keydown", listener);
+  return () => target.removeEventListener("keydown", listener);
 }
 
 export function keymapConflicts(keymap: Keymap) {
