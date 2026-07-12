@@ -7,7 +7,7 @@ try {
   process.exit(0);
 } catch { /* Fetch the pinned upstream revision below. */ }
 
-const url = 'https://raw.githubusercontent.com/exam-data/NETEMVocabulary/421ea13f186dff6042ec29b4187cd2817516bb9a/netem_full_list.json';
+const url = 'https://raw.githubusercontent.com/exam-data/NETEMVocabulary/70dc6b68c855f21e666a7a291ff8ead5ca1f7b44/netem_full_list.json';
 const response = await fetch(url);
 if (!response.ok) throw new Error(`Vocabulary download failed: ${response.status}`);
 const source = (await response.json())['5530考研词汇词频排序表'];
