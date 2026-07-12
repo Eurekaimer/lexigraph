@@ -32,10 +32,34 @@ export function actionForEvent(
   key: string,
   code = "",
 ): Action | undefined {
-  const physicalMatch = (Object.keys(keymap) as Action[]).find(
-    (action) => bindingToCode(keymap[action]) === code,
+  // Only trust physical code matching when code is a non-empty string.
+  // A missing / empty code (IME edge case) would otherwise risk false
+  // matches against bindings whose bindingToCode returns undefined.
+  if (code) {
+    const physicalMatch = (Object.keys(keymap) as Action[]).find(
+      (action) => bindingToCode(keymap[action]) === code,
+    );
+    if (physicalMatch) return physicalMatch;
+  }
+  return actionForKey(keymap, key);
+}
+
+/**
+ * Set to true in the browser console to trace every keypress:
+ *   window.__LEXI_DEBUG__ = true
+ */
+export function debugKeyEvent(
+  key: string,
+  code: string,
+  action: Action | undefined,
+) {
+  if (typeof window === "undefined" || !(window as any).__LEXI_DEBUG__) return;
+  console.log(
+    `[Lexigraph] key=%o code=%o → %o`,
+    key,
+    code,
+    action ?? "(unmapped)",
   );
-  return physicalMatch ?? actionForKey(keymap, key);
 }
 
 /** Converts a user-facing binding into a layout-independent KeyboardEvent.code. */
@@ -59,6 +83,7 @@ export function bindShortcutListener(
   const listener = (rawEvent: Event) => {
     const event = rawEvent as KeyboardEvent;
     const action = actionForEvent(getKeymap(), event.key, event.code);
+    debugKeyEvent(event.key, event.code, action);
     if (action) handler(action, event);
   };
   target.addEventListener("keydown", listener);
