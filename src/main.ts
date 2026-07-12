@@ -4,6 +4,8 @@ import "./history.css";
 import "./spelling.css";
 import "./notice.css";
 import "./search.css";
+import "@fontsource-variable/newsreader";
+import "@fontsource-variable/noto-sans-sc";
 import { loadWords } from "./data";
 import { graph, initial, schedule } from "./logic";
 import {
@@ -17,6 +19,7 @@ import { dailyReviews, recallRate } from "./stats";
 import { AnkiTsvExportAdapter, JsonExportAdapter, download } from "./export";
 import { buildStudyQueue } from "./queue";
 import { searchWords } from "./search";
+import { renderDocsView } from "./docs-view";
 import type { Action, Keymap, Rating } from "./types";
 
 type Route = "study" | "history" | "graph" | "stats" | "data" | "docs";
@@ -198,9 +201,7 @@ function dataView() {
 }
 
 function docsView() {
-  return frame(
-    `<article class="docs"><h1>Lexigraph 使用文档</h1><section><h2>两种运行模式</h2><div class="workflow"><span>Pages Demo</span><b>→</b><span>浏览器存储</span><b>→</b><span>导出 JSON</span></div><div class="workflow"><span>npm run local</span><b>→</b><span>本地服务</span><b>→</b><span>profiles/default.json</span></div><p>公共 Demo 无权修改仓库。个人模式只监听 127.0.0.1，并自动保存本地 JSON。</p></section><section><h2>四级记忆反馈</h2><table><tr><th>反馈</th><th>含义</th><th>默认键</th></tr><tr><td>完全忘记</td><td>无法回忆或回答错误</td><td>A</td></tr><tr><td>回忆困难</td><td>最终想起但明显犹豫</td><td>S</td></tr><tr><td>正常掌握</td><td>在合理时间正确回忆</td><td>D</td></tr><tr><td>非常熟练</td><td>几乎立即准确回忆</td><td>W</td></tr></table></section><section><h2>记忆与复习工作流</h2><div class="curve"><div class="curve-line"></div><span>记忆强度随时间下降；每次成功回忆提高强度并延长下一间隔。</span></div><div class="workflow"><span>显示单词</span><b>→</b><span>主动回忆</span><b>→</b><span>显示答案</span><b>→</b><span>评分</span><b>→</b><span>安排下次复习</span></div></section><section><h2>Anki 接口</h2><p>Anki 默认关闭。开启后可将已经学习的词导出为 UTF-8 TSV，再在 Anki 中选择制表符分隔导入。领域层不依赖 Anki；导出由独立 ExportAdapter 完成。</p></section><section><h2>项目自动发布</h2><div class="workflow"><span>Push main</span><b>→</b><span>Test</span><b>→</b><span>Build PWA</span><b>→</b><span>Deploy Pages</span></div></section></article>`,
-  );
+  return frame(renderDocsView());
 }
 
 function render() {
