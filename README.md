@@ -30,16 +30,16 @@ Use npm run dev for frontend development.
 
 ## Keyboard controls
 
-| Action | Default key |
-| --- | --- |
-| Show or hide the answer | Space |
-| Completely forgotten | A |
-| Recalled with difficulty | S |
-| Recalled normally | D |
-| Mark as completely mastered | W |
-| Undo the latest rating | Z |
-| Study / Graph / Statistics / Data / Docs | 1–5 |
-| Recent reviews | 6 |
+| Action                                   | Default key |
+| ---------------------------------------- | ----------- |
+| Show or hide the answer                  | Space       |
+| Completely forgotten                     | A           |
+| Recalled with difficulty                 | S           |
+| Recalled normally                        | D           |
+| Mark as completely mastered              | W           |
+| Undo the latest rating                   | Z           |
+| Study / Graph / Statistics / Data / Docs | 1–5         |
+| Recent reviews                           | 6           |
 
 Physical key codes are used when available, so study controls continue to work while an input method is active. Mappings can be changed from the Data page.
 
