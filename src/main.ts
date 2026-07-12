@@ -96,7 +96,7 @@ function frame(content: string) {
     route === "data"
       ? `<section class="plan-settings card"><h2>学习计划</h2><p class="muted">根据剩余词汇和目标日期动态计算每日新词量。</p><form data-plan-form><label>希望在 <input name="days" type="number" min="1" value="${remainingDays(state.studyPlan!)}"> 天内完成</label><button class="soft">更新计划</button></form><div class="plan-result">当前基础计划：每天约 ${dailyNewQuota(words.length, { ...state, studyPlan: { ...state.studyPlan!, extraGroups: {} } })} 个新词</div></section>`
       : "";
-  return `<main class="shell"><header class="top"><div><div class="brand">Lexi<i>graph</i></div><span class="subtitle">Words, memory, and the links between them.</span></div><nav class="nav">${nav}</nav></header>${notice}<div class="page">${search}${planner}${content}</div><div id="lexi-key-debug" style="position:fixed;bottom:0;left:0;right:0;background:#1a1a2e;color:#ccc;font:12px monospace;padding:4px 12px;z-index:999;display:none;opacity:0.9"></div></main>`;
+  return `<main class="shell"><header class="top"><div><div class="brand">Lexi<i>graph</i></div><span class="subtitle">Words, memory, and the links between them.</span></div><nav class="nav">${nav}</nav></header>${notice}<div class="page">${search}${planner}${content}</div></main>`;
 }
 
 function dictionaryPanel() {
@@ -456,5 +456,23 @@ bindShortcutListener(
     }
   },
 );
+
+// One-time debug bar — lives outside #app so render() can't destroy it
+const debugBar = document.createElement("div");
+debugBar.id = "lexi-key-debug";
+Object.assign(debugBar.style, {
+  position: "fixed",
+  bottom: "0",
+  left: "0",
+  right: "0",
+  background: "#1a1a2e",
+  color: "#ccc",
+  font: "12px monospace",
+  padding: "4px 12px",
+  zIndex: "999",
+  display: "none",
+  opacity: "0.9",
+});
+document.body.appendChild(debugBar);
 
 render();
