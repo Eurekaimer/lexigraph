@@ -76,3 +76,16 @@ it("does not return mastered review words", () => {
     buildStudyQueue(words, copy, new Date("2026-07-12")).map((word) => word.id),
   ).not.toContain("w0");
 });
+it("accepts an arbitrary new-word quota", () => {
+  const queue = buildStudyQueue(words, state, new Date("2026-07-12"), 37);
+  expect(queue).toHaveLength(37);
+  const counts = Array.from(
+    { length: 5 },
+    (_, layer) =>
+      queue.filter((word) => {
+        const index = Number(word.id.slice(1));
+        return index >= layer * 20 && index < (layer + 1) * 20;
+      }).length,
+  );
+  expect(counts).toEqual([8, 8, 7, 7, 7]);
+});
