@@ -28,8 +28,8 @@ export function buildStudyQueue(
   words: Word[],
   state: State,
   now = new Date(),
+  newWordQuota = 20,
   strata = 5,
-  perStratum = 4,
 ) {
   const studied = new Set(state.history.map((event) => event.wordId));
   const due = words.filter(
@@ -45,6 +45,12 @@ export function buildStudyQueue(
     (event) =>
       event.date.slice(0, 10) === date &&
       event.previousReview?.repetitions === 0,
+  );
+  const quotas = Array.from(
+    { length: strata },
+    (_, layer) =>
+      Math.floor(newWordQuota / strata) +
+      (layer < newWordQuota % strata ? 1 : 0),
   );
   const layers = Array.from({ length: strata }, (_, layer) => {
     const start = Math.floor((unseen.length * layer) / strata);
@@ -65,11 +71,11 @@ export function buildStudyQueue(
     });
     return seededSample(
       layerWords,
-      Math.max(0, perStratum - used),
+      Math.max(0, quotas[layer] - used),
       `${date}:${layer}`,
     );
   });
-  const newWords = Array.from({ length: perStratum }, (_, round) =>
+  const newWords = Array.from({ length: Math.max(...quotas, 0) }, (_, round) =>
     layers.map((layer) => layer[round]),
   )
     .flat()
