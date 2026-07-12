@@ -4,6 +4,7 @@ import "./history.css";
 import "./spelling.css";
 import "./notice.css";
 import "./search.css";
+import "./plan.css";
 import "@fontsource-variable/newsreader";
 import "@fontsource-variable/noto-sans-sc";
 import { loadWords } from "./data";
@@ -20,6 +21,13 @@ import { AnkiTsvExportAdapter, JsonExportAdapter, download } from "./export";
 import { buildStudyQueue } from "./queue";
 import { searchWords } from "./search";
 import { renderDocsView } from "./docs-view";
+import {
+  addExtraGroup,
+  dailyNewQuota,
+  defaultStudyPlan,
+  remainingDays,
+  setTargetDays,
+} from "./plan";
 import type { Action, Keymap, Rating } from "./types";
 
 type Route = "study" | "history" | "graph" | "stats" | "data" | "docs";
@@ -35,10 +43,12 @@ let spellingEnabled =
 let spellingTarget: string | null = null;
 let dictionaryQuery = "";
 let historyQuery = "";
+state.studyPlan ??= defaultStudyPlan();
 
 for (const word of words) state.reviews[word.id] ??= initial(word.id);
 const save = () => void storage.save(state, keymap);
-const dueWords = () => buildStudyQueue(words, state);
+const dueWords = () =>
+  buildStudyQueue(words, state, new Date(), dailyNewQuota(words.length, state));
 save();
 
 const escapeHtml = (value: string) =>
@@ -68,7 +78,7 @@ function frame(content: string) {
     .join("");
   const notice =
     route === "study"
-      ? '<aside class="notice-board"><b>使用提示</b><ul><li>Space 只显示或遮住释义。</li><li>WASD 随时提交回忆结果。</li><li>Z 撤销并返回上一个词。</li><li>每日从 5 个词频层混合抽取新词。</li><li>“完全掌握”会移出自动复习，请慎重选择。</li></ul></aside>'
+      ? `<aside class="notice-board"><b>今日计划</b><div class="notice-quota">${dailyNewQuota(words.length, state)} 个新词</div><small>距目标日期 ${remainingDays(state.studyPlan!)} 天</small><button class="soft" data-add-group>再加一组（+20）</button><hr><b>使用提示</b><ul><li>Space 只显示或遮住释义。</li><li>WASD 随时提交回忆结果。</li><li>Z 撤销并返回上一个词。</li><li>新词从 5 个词频层混合抽取。</li><li>“完全掌握”会移出自动复习，请慎重选择。</li></ul></aside>`
       : "";
   const search =
     route === "study"
@@ -76,7 +86,11 @@ function frame(content: string) {
       : route === "history"
         ? historySearchPanel()
         : "";
-  return `<main class="shell"><header class="top"><div><div class="brand">Lexi<i>graph</i></div><span class="subtitle">Words, memory, and the links between them.</span></div><nav class="nav">${nav}</nav></header>${notice}<div class="page">${search}${content}</div></main>`;
+  const planner =
+    route === "data"
+      ? `<section class="plan-settings card"><h2>学习计划</h2><p class="muted">根据剩余词汇和目标日期动态计算每日新词量。</p><form data-plan-form><label>希望在 <input name="days" type="number" min="1" value="${remainingDays(state.studyPlan!)}"> 天内完成</label><button class="soft">更新计划</button></form><div class="plan-result">当前基础计划：每天约 ${dailyNewQuota(words.length, { ...state, studyPlan: { ...state.studyPlan!, extraGroups: {} } })} 个新词</div></section>`
+      : "";
+  return `<main class="shell"><header class="top"><div><div class="brand">Lexi<i>graph</i></div><span class="subtitle">Words, memory, and the links between them.</span></div><nav class="nav">${nav}</nav></header>${notice}<div class="page">${search}${planner}${content}</div></main>`;
 }
 
 function dictionaryPanel() {
@@ -179,7 +193,7 @@ function dataView() {
     forgot: "完全忘记 / Forgot",
     hard: "回忆困难 / Hard",
     good: "正常掌握 / Good",
-    easy: "非常熟练 / Easy",
+    easy: "完全掌握 / Mastered",
     undo: "撤销上次评分 / Undo",
     study: "学习页 / Study",
     history: "最近复习 / History",
@@ -218,6 +232,24 @@ function render() {
 }
 
 function bind() {
+  document.querySelectorAll<HTMLElement>("[data-add-group]").forEach((button) =>
+    button.addEventListener("click", () => {
+      state.studyPlan = addExtraGroup(state.studyPlan!);
+      save();
+      render();
+    }),
+  );
+  document
+    .querySelector<HTMLFormElement>("[data-plan-form]")
+    ?.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const days = Number(
+        new FormData(event.currentTarget as HTMLFormElement).get("days"),
+      );
+      state.studyPlan = setTargetDays(state.studyPlan!, days);
+      save();
+      render();
+    });
   document
     .querySelector<HTMLFormElement>("[data-dictionary-form]")
     ?.addEventListener("submit", (event) => {
