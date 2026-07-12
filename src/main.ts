@@ -186,17 +186,39 @@ function heatmapColor(count: number) {
   return "#216e39";
 }
 function statsView() {
-  const TOTAL = 84; // 12 weeks
+  const TOTAL = 365;
   const days = dailyReviews(state, TOTAL);
   const countMap = new Map(days.map((d) => [d.key, d.count]));
   const today = new Date();
   const start = new Date(today);
   start.setDate(start.getDate() - TOTAL + 1);
   // Pad start back to Monday so the grid aligns to week boundaries
-  const padDays = (start.getDay() + 6) % 7; // days to reach Monday
+  const padDays = (start.getDay() + 6) % 7;
   const gridStart = new Date(start);
   gridStart.setDate(gridStart.getDate() - padDays);
   const WEEKS = Math.ceil((TOTAL + padDays) / 7);
+
+  // Build month labels: track which column each new month starts in
+  const monthLabels: { col: number; label: string }[] = [];
+  let lastMonth = -1;
+  for (let col = 0; col < WEEKS; col++) {
+    const d = new Date(gridStart);
+    d.setDate(d.getDate() + col * 7);
+    if (d.getMonth() !== lastMonth) {
+      lastMonth = d.getMonth();
+      monthLabels.push({ col, label: `${d.getMonth() + 1}月` });
+    }
+  }
+  const monthRow =
+    `<div class="heat-month-row" style="grid-template-columns:repeat(${WEEKS},1fr)">` +
+    monthLabels
+      .map(
+        (m) =>
+          `<span style="grid-column:${m.col + 1}">${m.label}</span>`,
+      )
+      .join("") +
+    `</div>`;
+
   let html = "";
   for (let row = 0; row < 7; row++) {
     for (let col = 0; col < WEEKS; col++) {
@@ -207,7 +229,7 @@ function statsView() {
       if (count === undefined) {
         html += `<div class="heat-cell empty"></div>`;
       } else {
-        const dateLabel = `${d.getMonth() + 1}月${d.getDate()}日`;
+        const dateLabel = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
         html += `<div class="heat-cell" style="background:${heatmapColor(count)}" title="${dateLabel}: ${count} 次复习"></div>`;
       }
     }
@@ -215,8 +237,9 @@ function statsView() {
   const legend = [0, 1, 3, 8, 15].map((n) =>
     `<span class="heat-legend-swatch" style="background:${heatmapColor(n)}"></span>`,
   ).join("");
+  const yearLabel = `${gridStart.getFullYear()}年 – ${today.getFullYear()}年`;
   return frame(
-    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>近 12 周复习热力图</h2><div class="heatmap-grid">${html}</div><div class="heat-legend">少 ${legend} 多</div></div>`,
+    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>复习热力图 · ${yearLabel}</h2>${monthRow}<div class="heatmap-grid" style="grid-template-columns:repeat(${WEEKS},1fr);aspect-ratio:${WEEKS}/7">${html}</div><div class="heat-legend">少 ${legend} 多</div></div>`,
   );
 }
 
