@@ -23,6 +23,23 @@ export function actionForKey(keymap: Keymap, key: string): Action | undefined {
   return (Object.keys(keymap) as Action[]).find(action => normalizeKey(keymap[action]) === normalized);
 }
 
+export function actionForEvent(keymap: Keymap, key: string, code = ''): Action | undefined {
+  const physicalKey = code === 'Space' ? ' ' : /^Key[A-Z]$/.test(code) ? code.slice(3).toLowerCase() : /^Digit[0-9]$/.test(code) ? code.slice(5) : '';
+  return actionForKey(keymap, physicalKey || key) ?? actionForKey(keymap, key);
+}
+
+export function keymapConflicts(keymap: Keymap) {
+  const seen = new Map<string, Action>();
+  const conflicts: [Action, Action][] = [];
+  for (const action of Object.keys(keymap) as Action[]) {
+    const key = normalizeKey(keymap[action]);
+    const previous = seen.get(key);
+    if (previous) conflicts.push([previous, action]);
+    else seen.set(key, action);
+  }
+  return conflicts;
+}
+
 export function displayKey(key: string) {
   return key === ' ' ? 'Space' : key.toUpperCase();
 }
