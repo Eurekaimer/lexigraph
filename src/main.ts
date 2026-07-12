@@ -240,7 +240,12 @@ function render() {
 function bind() {
   document.querySelectorAll<HTMLElement>("[data-add-group]").forEach((button) =>
     button.addEventListener("click", () => {
-      state.studyPlan = addExtraGroup(state.studyPlan!);
+      const studied = new Set(state.history.map((e) => e.wordId)).size;
+      state.studyPlan = addExtraGroup(
+        state.studyPlan!,
+        words.length,
+        studied,
+      );
       save();
       render();
     }),

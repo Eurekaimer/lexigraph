@@ -33,16 +33,35 @@ export function dailyNewQuota(
   );
   return base + (plan.extraGroups[dateKey(now)] ?? 0) * 20;
 }
-export function addExtraGroup(plan: StudyPlan, now = new Date()): StudyPlan {
+/**
+ * Adds a 20-word extra group to today's quota and advances the target date
+ * proportionally.  The advance is based on the current daily rate so that
+ * "one extra group" always shortens the plan by the right fraction:
+ *
+ *   advanceDays = (extraGroups × 20) ÷ (remainingWords ÷ remainingDays)
+ *
+ * Examples at the default ~20 words/day rate: 1 group → −1 day.
+ * With only 10 words/day left:           1 group → −2 days.
+ * With 100 words/day (compressed plan):   1 group → −0.2 days (rounds away later).
+ */
+export function addExtraGroup(
+  plan: StudyPlan,
+  totalWords: number,
+  studiedWords: number,
+  now = new Date(),
+): StudyPlan {
   const key = dateKey(now);
   const newExtra = (plan.extraGroups[key] ?? 0) + 1;
-  // Each extra group adds ~20 words — roughly one day's quota.
-  // Advance the target date so remaining days reflects the lighter workload.
+  const remaining = Math.max(1, totalWords - studiedWords);
   const currentDays = remainingDays(plan, now);
-  const adjustedDays = Math.max(1, currentDays - 1);
+  // Daily rate without extras — the baseline words-per-day of the plan
+  const dailyRate = remaining / currentDays;
+  // Total extra words today expressed in "normal days" of progress
+  const extraDays = (newExtra * 20) / dailyRate;
+  const newDays = Math.max(1, Math.round(currentDays - extraDays));
   return {
     ...plan,
-    targetDate: setTargetDays(plan, adjustedDays, now).targetDate,
+    targetDate: setTargetDays(plan, newDays, now).targetDate,
     extraGroups: { ...plan.extraGroups, [key]: newExtra },
   };
 }
