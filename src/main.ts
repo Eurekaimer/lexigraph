@@ -2,7 +2,7 @@ import './style.css';
 import './docs.css';
 import { loadWords } from './data';
 import { graph, initial, schedule } from './logic';
-import { actionForKey, defaultKeymap, displayKey } from './keymap';
+import { actionForEvent, defaultKeymap, displayKey, keymapConflicts } from './keymap';
 import { createStorage, normalizeState } from './storage';
 import { dailyReviews, recallRate } from './stats';
 import { AnkiTsvExportAdapter, JsonExportAdapter, download } from './export';
@@ -27,7 +27,7 @@ const navItems: [Route, string][] = [['study','学习'],['graph','易混词'],['
 
 function frame(content: string) {
   const nav = navItems.map(([key, label]) => `<button data-route="${key}" class="${route === key ? 'active' : ''}">${label}</button>`).join('');
-  return `<main class="shell"><header class="top"><div class="brand">Lexi<i>graph</i></div><span class="muted">桌面优先 · 本地数据</span></header>${content}</main><nav class="nav">${nav}</nav>`;
+  return `<main class="shell"><header class="top"><div><div class="brand">Lexi<i>graph</i></div><span class="subtitle">Words, memory, and the links between them.</span></div><nav class="nav">${nav}</nav></header><div class="page">${content}</div></main>`;
 }
 
 function studyView() {
@@ -35,8 +35,8 @@ function studyView() {
   const word = queue[0];
   if (!word) return frame('<h1>今日完成</h1><p class="muted">没有到期单词。</p>');
   const labels: [string, Action][] = [['完全忘记','forgot'],['回忆困难','hard'],['正常掌握','good'],['非常熟练','easy']];
-  const answer = shown ? `<div class="meaning">${escapeHtml(word.meaning)}</div><div class="example">${escapeHtml(word.category ?? '')}</div><div class="ratings">${labels.map(([label, action], rating) => `<button data-rate="${rating}">${label}（${displayKey(keymap[action])}）</button>`).join('')}</div>` : `<button class="reveal" data-show>显示释义（${displayKey(keymap.reveal)}）</button>`;
-  return frame(`<div class="stats"><div class="stat"><b>${queue.length}</b><small>当前待学习</small></div><div class="stat"><b>${state.history.length}</b><small>累计复习</small></div><div class="stat"><b>${words.length}</b><small>大纲词汇</small></div></div><article class="card hero"><small class="muted">按词频排列</small><h1 class="word">${escapeHtml(word.word)}</h1><div class="phonetic">${escapeHtml(word.phonetic || '暂缺音标')}</div>${answer}</article>`);
+  const answer = shown ? `<div class="meaning">${escapeHtml(word.meaning)}</div><div class="example">${escapeHtml(word.category ?? '')}</div><div class="ratings">${labels.map(([label, action], rating) => `<button data-rate="${rating}">${label}<kbd>${displayKey(keymap[action])}</kbd></button>`).join('')}</div><button class="hide-answer" data-show>再次按 ${displayKey(keymap.reveal)} 遮住释义</button>` : `<button class="reveal" data-show>显示释义 <kbd>${displayKey(keymap.reveal)}</kbd></button>`;
+  return frame(`<section class="study-grid"><aside class="study-aside"><span class="eyebrow">TODAY</span><h1>保持节奏，<br>一次一个词。</h1><p class="muted">先主动回忆，再查看答案。评分只描述这一次回忆的真实难度。</p><div class="stats"><div class="stat"><b>${queue.length}</b><small>当前待学习</small></div><div class="stat"><b>${state.history.length}</b><small>累计复习</small></div><div class="stat"><b>${words.length}</b><small>大纲词汇</small></div></div></aside><article class="card hero"><small class="muted">按词频排列 · Space 可显示或遮住</small><h1 class="word">${escapeHtml(word.word)}</h1><div class="phonetic">${escapeHtml(word.phonetic || '暂缺音标')}</div>${answer}</article></section>`);
 }
 
 function graphView() {
@@ -57,8 +57,9 @@ function statsView() {
 }
 
 function dataView() {
+  const conflicts = keymapConflicts(keymap);
   const mappings = (Object.keys(keymap) as Action[]).map(action => `<label class="pair"><span>${action}</span><input data-key="${action}" value="${displayKey(keymap[action])}" maxlength="8"></label>`).join('');
-  return frame(`<h1>数据与接口</h1><p class="muted">Pages 使用浏览器存储；npm run local 自动写入 gitignored 的 profiles/default.json。</p><div class="card"><div class="pair"><b>考研词库</b><span class="tag">${words.length} 词</span></div><div class="actions"><button class="soft" data-json>导出 JSON</button><label class="soft">导入 JSON<input hidden type="file" accept="application/json" data-import></label><label class="toggle"><input type="checkbox" data-anki> 启用 Anki 导出</label><button class="soft hidden" data-anki-export>导出 Anki TSV</button></div><h2>自定义键盘映射</h2>${mappings}</div>`);
+  return frame(`<div class="page-heading"><span class="eyebrow">PREFERENCES</span><h1>数据与接口</h1><p class="muted">Pages 使用浏览器存储；本地模式自动写入 profiles/default.json。</p></div><div class="card"><div class="pair"><b>考研词库</b><span class="tag">${words.length} 词</span></div><div class="actions"><button class="soft" data-json>导出 JSON</button><label class="soft">导入 JSON<input hidden type="file" accept="application/json" data-import></label><label class="toggle"><input type="checkbox" data-anki> 启用 Anki 导出</label><button class="soft hidden" data-anki-export>导出 Anki TSV</button></div><h2>自定义键盘映射</h2>${conflicts.length ? '<p class="warning">存在重复键位，请调整映射。</p>' : ''}${mappings}</div>`);
 }
 
 function docsView() {
@@ -73,7 +74,7 @@ function render() {
 
 function bind() {
   document.querySelectorAll<HTMLElement>('[data-route]').forEach(element => element.onclick = () => { route = element.dataset.route as Route; render(); });
-  document.querySelector<HTMLElement>('[data-show]')?.addEventListener('click', () => { shown = true; render(); });
+  document.querySelector<HTMLElement>('[data-show]')?.addEventListener('click', () => { shown = !shown; render(); });
   document.querySelectorAll<HTMLElement>('[data-rate]').forEach(element => element.onclick = () => {
     const word = dueWords()[0]; if (!word) return;
     const rating = Number(element.dataset.rate) as Rating;
@@ -105,9 +106,9 @@ function bind() {
 
 window.addEventListener('keydown', event => {
   if (event.target instanceof HTMLInputElement) return;
-  const action = actionForKey(keymap, event.key); if (!action) return;
+  const action = actionForEvent(keymap, event.key, event.code); if (!action) return;
   event.preventDefault();
-  if (action === 'reveal') { shown = true; return render(); }
+  if (action === 'reveal') { shown = !shown; return render(); }
   const ratings = { forgot:0, hard:1, good:2, easy:3 } as const;
   if (action in ratings && shown) return document.querySelector<HTMLElement>(`[data-rate="${ratings[action as keyof typeof ratings]}"]`)?.click();
   const routes: Partial<Record<Action,Route>> = { study:'study', graph:'graph', stats:'stats', data:'data', docs:'docs' };
