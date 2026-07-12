@@ -36,7 +36,7 @@ Use npm run dev for frontend development.
 | Completely forgotten | A |
 | Recalled with difficulty | S |
 | Recalled normally | D |
-| Recalled immediately | W |
+| Mark as completely mastered | W |
 | Undo the latest rating | Z |
 | Study / Graph / Statistics / Data / Docs | 1–5 |
 | Recent reviews | 6 |
@@ -48,6 +48,10 @@ Physical key codes are used when available, so study controls continue to work w
 The local server writes progress to profiles/default.json. Profile files are excluded from Git. Use the Data page to export a portable JSON backup and import it on another computer.
 
 The Recent Reviews page shows the latest ratings and frequently forgotten words. New review events store the previous scheduling state, allowing the latest accidental rating to be restored exactly.
+
+New words are sampled from five frequency strata, four words per stratum each day. This keeps the daily set stable while mixing common and less familiar vocabulary. Due reviews are interleaved with new material.
+
+The fourth rating removes a word from automatic review and should be used carefully. It remains visible in review history and can be rated again later.
 
 The public demo stores progress in the visitor's browser and has no permission to change this repository.
 
