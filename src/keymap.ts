@@ -47,6 +47,8 @@ export function actionForEvent(
 /**
  * Set to true in the browser console to trace every keypress:
  *   window.__LEXI_DEBUG__ = true
+ *
+ * Shows diagnostics directly on the page (no console needed).
  */
 export function debugKeyEvent(
   key: string,
@@ -54,6 +56,15 @@ export function debugKeyEvent(
   action: Action | undefined,
 ) {
   if (typeof window === "undefined" || !(window as any).__LEXI_DEBUG__) return;
+  const info = { key, code, action: action ?? "(unmapped)", time: Date.now() };
+  (window as any).__LEXI_LAST_KEY__ = info;
+  // Also update a DOM element if it exists (visible on-page, no console needed)
+  const el = document.getElementById("lexi-key-debug");
+  if (el) {
+    el.style.display = "block";
+    el.textContent = `key="${key}" code="${code}" → ${info.action}`;
+    el.style.color = action ? "#95d5b2" : "#e63946";
+  }
   console.log(
     `[Lexigraph] key=%o code=%o → %o`,
     key,

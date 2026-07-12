@@ -35,11 +35,14 @@ export function dailyNewQuota(
 }
 export function addExtraGroup(plan: StudyPlan, now = new Date()): StudyPlan {
   const key = dateKey(now);
+  const newExtra = (plan.extraGroups[key] ?? 0) + 1;
+  // Each extra group adds ~20 words — roughly one day's quota.
+  // Advance the target date so remaining days reflects the lighter workload.
+  const currentDays = remainingDays(plan, now);
+  const adjustedDays = Math.max(1, currentDays - 1);
   return {
     ...plan,
-    extraGroups: {
-      ...plan.extraGroups,
-      [key]: (plan.extraGroups[key] ?? 0) + 1,
-    },
+    targetDate: setTargetDays(plan, adjustedDays, now).targetDate,
+    extraGroups: { ...plan.extraGroups, [key]: newExtra },
   };
 }

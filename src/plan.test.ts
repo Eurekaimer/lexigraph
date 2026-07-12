@@ -25,6 +25,10 @@ it("derives quota from remaining words and days", () => {
   };
   expect(dailyNewQuota(101, state, now)).toBe(11);
 });
+it("advances the target date with each extra group", () => {
+  const plan = addExtraGroup(defaultStudyPlan(now), now);
+  expect(remainingDays(plan, now)).toBe(280 - 1);
+});
 it("adds twenty words for each extra group", () => {
   let plan = defaultStudyPlan(now);
   plan = addExtraGroup(addExtraGroup(plan, now), now);
@@ -34,5 +38,7 @@ it("adds twenty words for each extra group", () => {
     history: [],
     studyPlan: plan,
   };
-  expect(dailyNewQuota(100, state, now)).toBe(Math.ceil(100 / 280) + 40);
+  // 2 extra groups → target advanced by 2 days → remainingDays = 278
+  // base = ceil(100 / 278) = 1, extra = 2 * 20 = 40
+  expect(dailyNewQuota(100, state, now)).toBe(1 + 40);
 });
