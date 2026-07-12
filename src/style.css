@@ -272,8 +272,41 @@ button {
 h1 {
   font-family: "Newsreader Variable", "Noto Sans SC Variable", sans-serif;
 }
-.chart {
-  height: 180px !important;
+.chart,
+.heatmap {
+  display: flex;
+  gap: 2px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin: 16px 0 6px;
+}
+.heatmap small {
+  display: block;
+  width: 24px;
+  text-align: center;
+  font-size: 9px;
+  color: #8a8176;
+  margin-top: 2px;
+}
+.heat-cell {
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+.heat-legend {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  color: #8a8176;
+  margin-top: 10px;
+}
+.heat-legend-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
 }
 @media (max-width: 820px) {
   .shell {

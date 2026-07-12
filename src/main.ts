@@ -178,17 +178,28 @@ function graphView() {
   );
 }
 
+function heatmapColor(count: number) {
+  if (count === 0) return "#ebedf0";
+  if (count <= 3) return "#9be9a8";
+  if (count <= 8) return "#40c463";
+  if (count <= 15) return "#30a14e";
+  return "#216e39";
+}
 function statsView() {
-  const days = dailyReviews(state),
-    max = Math.max(1, ...days.map((day) => day.count));
-  const bars = days
+  const days = dailyReviews(state);
+  const cells = days
     .map(
-      (day) =>
-        `<div class="bar-wrap" title="${day.date}: ${day.count}"><div class="bar" style="height:${Math.max(3, (day.count / max) * 120)}px"></div><small>${day.date.slice(3)}</small></div>`,
+      (day) => {
+        const color = heatmapColor(day.count);
+        return `<div class="heat-cell" title="${day.date}: ${day.count} 次复习" style="background:${color}"></div><small>${day.date.slice(3)}</small>`;
+      },
     )
     .join("");
+  const legend = [0, 1, 3, 8, 15].map((n) =>
+    `<span class="heat-legend-swatch" style="background:${heatmapColor(n)}"></span>`,
+  ).join("");
   return frame(
-    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>近 14 天复习量</h2><div class="chart">${bars}</div></div>`,
+    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>近 14 天复习量</h2><div class="heatmap">${cells}</div><div class="heat-legend">少 ${legend} 多</div></div>`,
   );
 }
 
