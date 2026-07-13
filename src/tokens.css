@@ -1,0 +1,39 @@
+:root {
+  color-scheme: light;
+  font-family:
+    "Noto Sans SC Variable", "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+  color: #17221e;
+  background: #f1f3ef;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+
+  --font-sans: "Noto Sans SC Variable", "Noto Sans SC", "Microsoft YaHei UI", sans-serif;
+  --font-display: "Newsreader Variable", "Noto Sans SC Variable", serif;
+  --ink: #17221e;
+  --ink-soft: #53605a;
+  --ink-muted: #5f6d66;
+  --canvas: #f1f3ef;
+  --surface: #ffffff;
+  --surface-soft: #f7f8f5;
+  --surface-tint: #edf2ee;
+  --line: #dfe4df;
+  --line-strong: #cdd5cf;
+  --accent: #315d4d;
+  --accent-strong: #21483b;
+  --accent-soft: #e5eee9;
+  --danger: #a94f49;
+  --danger-soft: #f7e9e7;
+  --warning: #9b6a2f;
+  --warning-soft: #f7efe1;
+  --success: #357255;
+  --success-soft: #e7f1eb;
+  --master: #4a5f88;
+  --master-soft: #e9edf5;
+  --shadow-sm: 0 1px 2px rgb(24 38 31 / 4%), 0 5px 16px rgb(24 38 31 / 5%);
+  --shadow-md: 0 18px 48px rgb(24 38 31 / 8%), 0 3px 10px rgb(24 38 31 / 4%);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --content: 1360px;
+  --ease: 180ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}

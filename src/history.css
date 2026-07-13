@@ -1,1 +1,164 @@
-.quick-actions{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}.quick-actions .soft{font-size:12px}.quick-actions label{display:inline-flex;align-items:center}.history-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(240px,1fr);gap:22px;align-items:start}.section-title{display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #e8e0d5;padding-bottom:14px}.section-title h2{margin:0}.history-row{display:grid;grid-template-columns:minmax(180px,1fr) auto auto;gap:18px;align-items:center;padding:15px 0;border-bottom:1px solid #ece5da}.history-row b{font:700 19px Georgia,serif}.history-meaning{display:block;color:#766e64;font-size:13px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:390px}.history-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px}.history-meta time{font-size:11px;color:#91887d}.rating{font-size:12px;border-radius:99px;padding:4px 8px;background:#eee7dc}.rating-0{color:#a23b32;background:#f5e1dd}.rating-3{color:#3f7152;background:#e1efe5}.rerate{display:flex;gap:4px}.rerate button{width:30px;height:30px;border:1px solid #ddd4c7;border-radius:7px;background:#faf7f1}.rerate button:hover{border-color:#a54136}.weak-list{position:sticky;top:20px}.weak-list h2{margin-top:0}@media(max-width:820px){.history-layout{grid-template-columns:1fr}.history-row{grid-template-columns:1fr auto}.rerate{grid-column:1/-1}.weak-list{position:static}}
+.history-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(240px, 0.8fr);
+  gap: 22px;
+  align-items: start;
+}
+
+.history-card,
+.weak-list {
+  padding: 24px;
+}
+
+.section-title .soft .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.section-title .soft kbd {
+  padding: 2px 5px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--surface-soft);
+}
+
+.history-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) auto auto;
+  gap: 18px;
+  align-items: center;
+  min-height: 72px;
+  padding: 13px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.history-row:last-child {
+  border-bottom: 0;
+}
+
+.history-row b {
+  font: 620 19px var(--font-display);
+}
+
+.history-meaning {
+  display: block;
+  max-width: 390px;
+  margin-top: 3px;
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-meta {
+  display: flex;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.history-meta time {
+  color: var(--ink-muted);
+  font-size: 9px;
+}
+
+.rating {
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: var(--surface-tint);
+  color: var(--ink-soft);
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.rating-0 { background: var(--danger-soft); color: var(--danger); }
+.rating-1 { background: var(--warning-soft); color: var(--warning); }
+.rating-2 { background: var(--success-soft); color: var(--success); }
+.rating-3 { background: var(--master-soft); color: var(--master); }
+
+.rerate {
+  display: flex;
+  gap: 4px;
+}
+
+.rerate button {
+  display: grid;
+  place-items: center;
+  width: 29px;
+  height: 29px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: var(--surface-soft);
+  color: var(--ink-soft);
+  font: 650 9px "SFMono-Regular", Consolas, monospace;
+}
+
+.rerate button:hover {
+  border-color: #9aada2;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.weak-list {
+  position: sticky;
+  top: 88px;
+}
+
+.weak-list h2 {
+  margin: 5px 0 7px;
+  font-size: 19px;
+}
+
+.weak-intro {
+  margin: 0 0 9px;
+  font-size: 10px;
+}
+
+.weak-list .pair {
+  padding: 11px 0;
+}
+
+.weak-list .pair span {
+  font: 580 15px var(--font-display);
+}
+
+.weak-list .pair b {
+  color: var(--danger);
+  font: 650 10px var(--font-sans);
+}
+
+@media (max-width: 900px) {
+  .history-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .weak-list {
+    position: static;
+  }
+}
+
+@media (max-width: 620px) {
+  .history-card,
+  .weak-list {
+    padding: 18px;
+  }
+
+  .section-title {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .history-row {
+    grid-template-columns: 1fr auto;
+    gap: 10px;
+  }
+
+  .history-meta {
+    align-self: start;
+  }
+
+  .rerate {
+    grid-column: 1 / -1;
+  }
+}

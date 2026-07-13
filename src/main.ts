@@ -1,12 +1,13 @@
+import "@fontsource-variable/newsreader";
+import "@fontsource-variable/noto-sans-sc";
+import "./tokens.css";
 import "./style.css";
 import "./docs.css";
 import "./history.css";
 import "./spelling.css";
-import "./notice.css";
 import "./search.css";
 import "./plan.css";
-import "@fontsource-variable/newsreader";
-import "@fontsource-variable/noto-sans-sc";
+import "./stats.css";
 import { loadWords } from "./data";
 import { graph, initial, schedule } from "./logic";
 import {
@@ -16,11 +17,13 @@ import {
   keymapConflicts,
 } from "./keymap";
 import { createStorage, normalizeState } from "./storage";
-import { dailyReviews, recallRate } from "./stats";
+import { recallRate, todayStudyActivity } from "./stats";
 import { AnkiTsvExportAdapter, JsonExportAdapter, download } from "./export";
 import { buildStudyQueue } from "./queue";
 import { searchWords } from "./search";
 import { renderDocsView } from "./docs-view";
+import { escapeHtml } from "./html";
+import { buildReviewHeatmap, heatmapColor } from "./heatmap";
 import {
   addExtraGroup,
   dailyNewQuota,
@@ -28,12 +31,21 @@ import {
   remainingDays,
   setTargetDays,
 } from "./plan";
+import {
+  icon,
+  ratingOptions,
+  renderAppShell,
+} from "./ui";
+import type { Route } from "./ui";
+import {
+  renderCompletionView,
+  renderSpellingView,
+  renderStudyView,
+} from "./study-view";
 import type { Action, Keymap, Rating } from "./types";
 
-type Route = "study" | "history" | "graph" | "stats" | "data" | "docs";
-
-// Enable key debug mode via ?debug in the URL (no console needed)
-if (typeof window !== "undefined" && /[?&]debug(?:$|&)/.test(location.search)) {
+// ?debug provides an on-page trace when an extension intercepts study keys.
+if (/[?&]debug(?:$|&)/.test(location.search)) {
   (window as any).__LEXI_DEBUG__ = true;
 }
 
@@ -57,36 +69,10 @@ const dueWords = () =>
   buildStudyQueue(words, state, new Date(), dailyNewQuota(words.length, state));
 save();
 
-const escapeHtml = (value: string) =>
-  value.replace(
-    /[&<>"']/g,
-    (char) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        char
-      ]!,
-  );
-const navItems: [Route, string][] = [
-  ["study", "学习"],
-  ["history", "最近复习"],
-  ["graph", "易混词"],
-  ["stats", "统计"],
-  ["data", "数据"],
-  ["docs", "文档"],
-];
-const ratingLabels = ["完全忘记", "回忆困难", "正常掌握", "完全掌握"];
+const ratingLabels = ratingOptions.map((option) => option.label);
 
 function frame(content: string) {
-  const nav = navItems
-    .map(
-      ([key, label]) =>
-        `<button data-route="${key}" class="${route === key ? "active" : ""}">${label}</button>`,
-    )
-    .join("");
-  const notice =
-    route === "study"
-      ? `<aside class="notice-board"><b>今日计划</b><div class="notice-quota">${dailyNewQuota(words.length, state)} 个新词</div><small>距目标日期 ${remainingDays(state.studyPlan!)} 天</small><button class="soft" data-add-group>再加一组（+20）</button><hr><b>使用提示</b><ul><li>Space 只显示或遮住释义。</li><li>WASD 随时提交回忆结果。</li><li>Z 撤销并返回上一个词。</li><li>新词从 5 个词频层混合抽取。</li><li>“完全掌握”会移出自动复习，请慎重选择。</li></ul></aside>`
-      : "";
-  const search =
+  const utility =
     route === "study"
       ? dictionaryPanel()
       : route === "history"
@@ -94,38 +80,64 @@ function frame(content: string) {
         : "";
   const planner =
     route === "data"
-      ? `<section class="plan-settings card"><h2>学习计划</h2><p class="muted">根据剩余词汇和目标日期动态计算每日新词量。</p><form data-plan-form><label>希望在 <input name="days" type="number" min="1" value="${remainingDays(state.studyPlan!)}"> 天内完成</label><button class="soft">更新计划</button></form><div class="plan-result">当前基础计划：每天约 ${dailyNewQuota(words.length, { ...state, studyPlan: { ...state.studyPlan!, extraGroups: {} } })} 个新词</div></section>`
+      ? `<section class="plan-settings card surface-section"><div class="section-icon">${icon("clock")}</div><div><span class="eyebrow">STUDY PLAN</span><h2>学习计划</h2><p class="muted">系统会按照剩余词量和目标日期，自动计算每天需要学习的新词。</p><form data-plan-form><label>计划在 <input name="days" type="number" min="1" value="${remainingDays(state.studyPlan!)}" aria-label="完成计划所需天数"> 天内完成</label><button class="soft primary">更新计划</button></form><div class="plan-result">当前基础计划：每天约 ${dailyNewQuota(words.length, { ...state, studyPlan: { ...state.studyPlan!, extraGroups: {} } })} 个新词</div></div></section>`
       : "";
-  return `<main class="shell"><header class="top"><div><div class="brand">Lexi<i>graph</i></div><span class="subtitle">Words, memory, and the links between them.</span></div><nav class="nav">${nav}</nav></header>${notice}<div class="page">${search}${planner}${content}</div></main>`;
+  return renderAppShell({
+    route,
+    keymap,
+    utility: utility + planner,
+    content,
+  });
 }
 
 function dictionaryPanel() {
   const results = searchWords(words, dictionaryQuery, 8);
-  return `<section class="dictionary-search"><form class="word-search" data-dictionary-form><input name="query" value="${escapeHtml(dictionaryQuery)}" placeholder="搜索单词，也支持近似拼写"><button>搜索</button></form>${dictionaryQuery ? `<div class="search-results">${results.map((result) => `<div><b>${escapeHtml(result.word.word)}</b><span>${escapeHtml(result.word.meaning)}</span><small>${result.reason}</small></div>`).join("") || "<p>没有找到相近的词。</p>"}</div>` : ""}</section>`;
+  return `<section class="dictionary-search" aria-label="词典与数据工具">
+    <div class="study-toolbar">
+      <form class="word-search" data-dictionary-form role="search">
+        ${icon("search", "search-icon")}
+        <input name="query" value="${escapeHtml(dictionaryQuery)}" aria-label="搜索大纲单词" placeholder="查单词、释义或近似拼写">
+        <button type="submit">搜索</button>
+      </form>
+      <div class="toolbar-actions">
+        <button type="button" class="icon-button" data-undo title="撤销上次评分">${icon("undo")}<span>撤销</span><kbd>${displayKey(keymap.undo)}</kbd></button>
+        <button type="button" class="icon-button" data-json title="导出学习数据">${icon("download")}<span>导出</span></button>
+        <label class="icon-button" title="导入学习数据">${icon("upload")}<span>导入</span><input hidden type="file" accept="application/json" data-import></label>
+      </div>
+    </div>
+    ${dictionaryQuery ? `<div class="search-results" aria-live="polite">${results.map((result) => `<div><b>${escapeHtml(result.word.word)}</b><span>${escapeHtml(result.word.meaning)}</span><small>${result.reason}</small></div>`).join("") || '<p class="empty-inline">没有找到相近的词。</p>'}</div>` : ""}
+  </section>`;
 }
 
 function historySearchPanel() {
-  return `<section class="dictionary-search compact"><form class="word-search" data-history-form><input name="query" value="${escapeHtml(historyQuery)}" placeholder="搜索已经复习过的单词"><button>搜索</button></form></section>`;
+  return `<section class="dictionary-search compact"><form class="word-search" data-history-form role="search">${icon("search", "search-icon")}<input name="query" value="${escapeHtml(historyQuery)}" aria-label="搜索已经复习过的单词" placeholder="搜索已经复习过的单词"><button type="submit">搜索</button></form></section>`;
 }
 
 function studyView() {
   if (spellingTarget) {
-    return frame(
-      `<section class="spelling-card card"><span class="eyebrow">OPTIONAL SPELLING</span><h1>拼写练习</h1><p class="muted">根据释义输入刚才忘记的单词。这个练习不会改变复习评分。</p><div class="meaning">${escapeHtml(words.find((word) => word.id === spellingTarget)?.meaning ?? "")}</div><input data-spelling autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="输入单词后按 Enter"><div class="spelling-feedback" data-spelling-feedback></div><button class="soft" data-spelling-skip>跳过</button></section>`,
-    );
+    return frame(renderSpellingView(words.find((word) => word.id === spellingTarget)?.meaning ?? ""));
   }
   const queue = dueWords();
   const word = queue[0];
-  if (!word)
-    return frame('<h1>今日完成</h1><p class="muted">没有到期单词。</p>');
-  const actions: Action[] = ["forgot", "hard", "good", "easy"];
-  const ratings = `<div class="ratings">${ratingLabels.map((label, rating) => `<button data-rate="${rating}" ${rating === 3 ? 'class="master-button" title="移出自动复习，请慎重选择"' : ""}>${label}<kbd>${displayKey(keymap[actions[rating]])}</kbd>${rating === 3 ? "<small>移出复习</small>" : ""}</button>`).join("")}</div>`;
-  const answer = shown
-    ? `<div class="meaning">${escapeHtml(word.meaning)}</div><div class="example">${escapeHtml(word.category ?? "")}</div><button class="hide-answer" data-show>再次按 ${displayKey(keymap.reveal)} 遮住释义</button>`
-    : `<button class="reveal" data-show>显示释义 <kbd>${displayKey(keymap.reveal)}</kbd></button>`;
-  return frame(
-    `<section class="study-grid"><aside class="study-aside"><span class="eyebrow">TODAY</span><h1>保持节奏，<br>一次一个词。</h1><p class="muted">可以先看释义，也可以直接评分。误触后按 Z 撤销。</p><div class="quick-actions"><button class="soft" data-undo>撤销上次（Z）</button><button class="soft" data-json>导出 JSON</button><label class="soft">导入 JSON<input hidden type="file" accept="application/json" data-import></label></div><div class="stats"><div class="stat"><b>${queue.length}</b><small>当前待学习</small></div><div class="stat"><b>${state.history.length}</b><small>累计复习</small></div><div class="stat"><b>${words.length}</b><small>大纲词汇</small></div></div></aside><article class="card hero"><small class="muted">Space 显示或遮住 · WASD 随时评分</small><h1 class="word">${escapeHtml(word.word)}</h1><div class="phonetic">${escapeHtml(word.phonetic || "暂缺音标")}</div>${answer}${ratings}</article></section>`,
-  );
+  if (!word) return frame(renderCompletionView());
+
+  const quota = dailyNewQuota(words.length, state);
+  const activity = todayStudyActivity(state);
+  return frame(renderStudyView({
+    word,
+    keymap,
+    queueLength: queue.length,
+    quota,
+    newWordsToday: activity.newWords,
+    reviewsToday: activity.reviews,
+    daysRemaining: remainingDays(state.studyPlan!),
+    dateLabel: new Date().toLocaleDateString("zh-CN", {
+      month: "long",
+      day: "numeric",
+    }),
+    isNewWord: !state.history.some((event) => event.wordId === word.id),
+    answerShown: shown,
+  }));
 }
 
 function historyView() {
@@ -153,7 +165,7 @@ function historyView() {
     .sort((a, b) => b.lapses - a.lapses)
     .slice(0, 20);
   return frame(
-    `<div class="page-heading"><span class="eyebrow">REVIEW LOG</span><h1>最近复习</h1><p class="muted">检查刚才的评分、重新标记，或用 Z 精确撤销最后一次操作。</p></div><div class="history-layout"><section class="card"><div class="section-title"><h2>最近 100 条</h2><button class="soft" data-undo>撤销最后一次（Z）</button></div>${rows || '<p class="muted">还没有复习记录。</p>'}</section><aside class="card weak-list"><h2>经常遗忘</h2>${forgotten.map((review) => `<div class="pair"><span>${escapeHtml(words.find((word) => word.id === review.wordId)?.word ?? review.wordId)}</span><b>${review.lapses} 次</b></div>`).join("") || '<p class="muted">暂无遗忘记录。</p>'}</aside></div>`,
+    `<div class="page-heading"><span class="eyebrow">REVIEW LOG</span><h1>复习记录</h1><p class="muted">检查近期评分、重新标记，或精确撤销最后一次操作。</p></div><div class="history-layout"><section class="card history-card"><div class="section-title"><div><span class="section-caption">最近活动</span><h2>最近 100 条</h2></div><button type="button" class="soft" data-undo>${icon("undo")} 撤销最后一次 <kbd>${displayKey(keymap.undo)}</kbd></button></div>${rows || '<div class="empty-state"><p>还没有复习记录。</p><span>完成第一个单词后，评分会显示在这里。</span></div>'}</section><aside class="card weak-list"><span class="section-caption">MEMORY FRICTION</span><h2>经常遗忘</h2><p class="muted weak-intro">按累计遗忘次数排序，帮助你快速找到薄弱词汇。</p>${forgotten.map((review) => `<div class="pair"><span>${escapeHtml(words.find((word) => word.id === review.wordId)?.word ?? review.wordId)}</span><b>${review.lapses} 次</b></div>`).join("") || '<p class="muted">暂无遗忘记录。</p>'}</aside></div>`,
   );
 }
 
@@ -174,72 +186,28 @@ function graphView() {
     state,
   ).slice(0, 30);
   return frame(
-    `<h1>个性化易混词网络</h1><p class="muted">这是关联网络，不宣称因果关系。边权来自拼写相似与真实误认记录。</p><div class="card">${pairs.map((item) => `<div class="pair"><div><b>${escapeHtml(item.a.word)} · ${escapeHtml(item.b.word)}</b><div class="muted">拼写距离 ${item.d}${item.m ? `，误认 ${item.m} 次` : ""}</div></div><span class="tag">${item.score.toFixed(2)}</span></div>`).join("") || '<p class="muted">产生遗忘或误认记录后显示个性化连接。</p>'}</div>`,
+    `<div class="page-heading"><span class="eyebrow">CONFUSION GRAPH</span><h1>易混词图谱</h1><p class="muted">依据拼写相似度与真实误认记录构建关联，不把相关性误写成因果关系。</p></div><section class="card graph-card"><div class="section-title"><div><span class="section-caption">PERSONAL CONNECTIONS</span><h2>高权重连接</h2></div><span class="tag">${pairs.length} 组</span></div>${pairs.map((item) => `<div class="pair graph-pair"><div class="word-pair"><b>${escapeHtml(item.a.word)}</b><i>${icon("graph")}</i><b>${escapeHtml(item.b.word)}</b></div><div class="graph-meta"><span>拼写距离 ${item.d}${item.m ? ` · 误认 ${item.m} 次` : ""}</span><strong>${item.score.toFixed(2)}</strong></div></div>`).join("") || '<div class="empty-state"><p>尚未形成个性化连接</p><span>产生遗忘或误认记录后，系统会逐步构建你的易混词网络。</span></div>'}</section>`,
   );
 }
 
-function heatmapColor(count: number) {
-  if (count === 0) return "#ebedf0";
-  if (count <= 3) return "#9be9a8";
-  if (count <= 8) return "#40c463";
-  if (count <= 15) return "#30a14e";
-  return "#216e39";
-}
 function statsView() {
-  const TOTAL = 365;
-  const days = dailyReviews(state, TOTAL);
-  const countMap = new Map(days.map((d) => [d.key, d.count]));
-  const today = new Date();
-  const start = new Date(today);
-  start.setDate(start.getDate() - TOTAL + 1);
-  // Pad start back to Monday so the grid aligns to week boundaries
-  const padDays = (start.getDay() + 6) % 7;
-  const gridStart = new Date(start);
-  gridStart.setDate(gridStart.getDate() - padDays);
-  const WEEKS = Math.ceil((TOTAL + padDays) / 7);
-
-  // Build month labels: track which column each new month starts in
-  const monthLabels: { col: number; label: string }[] = [];
-  let lastMonth = -1;
-  for (let col = 0; col < WEEKS; col++) {
-    const d = new Date(gridStart);
-    d.setDate(d.getDate() + col * 7);
-    if (d.getMonth() !== lastMonth) {
-      lastMonth = d.getMonth();
-      monthLabels.push({ col, label: `${d.getMonth() + 1}月` });
-    }
-  }
-  const monthRow =
-    `<div class="heat-month-row" style="grid-template-columns:repeat(${WEEKS},1fr)">` +
-    monthLabels
-      .map(
-        (m) =>
-          `<span style="grid-column:${m.col + 1}">${m.label}</span>`,
-      )
-      .join("") +
-    `</div>`;
-
-  let html = "";
-  for (let row = 0; row < 7; row++) {
-    for (let col = 0; col < WEEKS; col++) {
-      const d = new Date(gridStart);
-      d.setDate(d.getDate() + col * 7 + row);
-      const key = d.toISOString().slice(0, 10);
-      const count = countMap.get(key);
-      if (count === undefined) {
-        html += `<div class="heat-cell empty"></div>`;
-      } else {
-        const dateLabel = `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-        html += `<div class="heat-cell" style="background:${heatmapColor(count)}" title="${dateLabel}: ${count} 次复习"></div>`;
-      }
-    }
-  }
-  const legend = [0, 1, 3, 8, 15].map((n) =>
-    `<span class="heat-legend-swatch" style="background:${heatmapColor(n)}"></span>`,
-  ).join("");
-  const yearLabel = `${gridStart.getFullYear()}年 – ${today.getFullYear()}年`;
+  const heatmap = buildReviewHeatmap(state);
+  const monthRow = `<div class="heat-month-row" style="grid-template-columns:repeat(${heatmap.weeks},1fr)">${heatmap.monthLabels.map((month) => `<span style="grid-column:${month.column + 1}">${month.label}</span>`).join("")}</div>`;
+  const cells = heatmap.cells
+    .map((cell) =>
+      cell.count === null
+        ? '<span class="heat-cell empty"></span>'
+        : `<span class="heat-cell" style="background:${heatmapColor(cell.count)}" title="${cell.label}: ${cell.count} 次复习"></span>`,
+    )
+    .join("");
+  const legend = [0, 1, 4, 9, 16]
+    .map(
+      (count) =>
+        `<span class="heat-legend-swatch" style="background:${heatmapColor(count)}"></span>`,
+    )
+    .join("");
   return frame(
-    `<h1>学习统计</h1><div class="stats"><div class="stat"><b>${state.history.length}</b><small>总复习</small></div><div class="stat"><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>遗忘次数</small></div></div><div class="card"><h2>复习热力图 · ${yearLabel}</h2>${monthRow}<div class="heatmap-grid" style="grid-template-columns:repeat(${WEEKS},1fr);aspect-ratio:${WEEKS}/7">${html}</div><div class="heat-legend">少 ${legend} 多</div></div>`,
+    `<div class="page-heading"><span class="eyebrow">LEARNING INSIGHTS</span><h1>学习统计</h1><p class="muted">用一整年的活动趋势判断节奏，不被单日波动干扰。</p></div><div class="overview-stats"><div class="stat"><span class="stat-icon">${icon("history")}</span><b>${state.history.length}</b><small>累计复习</small></div><div class="stat"><span class="stat-icon">${icon("stats")}</span><b>${(recallRate(state) * 100).toFixed(1)}%</b><small>正常或熟练</small></div><div class="stat"><span class="stat-icon">${icon("spark")}</span><b>${Object.values(state.reviews).reduce((sum, review) => sum + review.lapses, 0)}</b><small>累计遗忘</small></div></div><section class="card heatmap-card"><div class="section-title"><div><span class="section-caption">LAST 365 DAYS</span><h2>复习热力图</h2></div><span class="muted">${heatmap.startYear} – ${heatmap.endYear}</span></div><div class="heatmap-scroll" tabindex="0" aria-label="横向滚动查看全年复习热力图"><div class="heatmap-canvas">${monthRow}<div class="heatmap-grid" style="grid-template-columns:repeat(${heatmap.weeks},1fr)" role="img" aria-label="过去 365 天每天的复习次数">${cells}</div><div class="heat-legend">少 ${legend} 多</div></div></div></section>`,
   );
 }
 
@@ -267,7 +235,12 @@ function dataView() {
     )
     .join("");
   return frame(
-    `<div class="page-heading"><span class="eyebrow">PREFERENCES</span><h1>数据与接口</h1><p class="muted">Pages 使用浏览器存储；本地模式自动写入 profiles/default.json。</p></div><div class="card"><div class="pair"><b>考研词库</b><span class="tag">${words.length} 词</span></div><div class="actions"><button class="soft" data-json>导出 JSON</button><label class="soft">导入 JSON<input hidden type="file" accept="application/json" data-import></label><label class="toggle"><input type="checkbox" data-spelling-toggle ${spellingEnabled ? "checked" : ""}> 启用遗忘词拼写练习</label><label class="toggle"><input type="checkbox" data-anki> 启用 Anki 导出</label><button class="soft hidden" data-anki-export>导出 Anki TSV</button></div><h2>自定义键盘映射</h2>${conflicts.length ? '<p class="warning">存在重复键位，请调整映射。</p>' : ""}${mappings}</div>`,
+    `<div class="page-heading"><span class="eyebrow">PREFERENCES</span><h1>数据与设置</h1><p class="muted">管理个人学习档案、可选功能与键盘工作流。</p></div>
+    <div class="settings-grid">
+      <section class="card settings-section"><div class="settings-heading"><span class="section-icon">${icon("file")}</span><div><span class="section-caption">PROFILE</span><h2>学习数据</h2></div><span class="tag">${words.length} 词</span></div><p class="muted">Pages 将进度保存在当前浏览器；本地模式自动写入 <code>profiles/default.json</code>。</p><div class="actions"><button type="button" class="soft primary" data-json>${icon("download")} 导出 JSON</button><label class="soft">${icon("upload")} 导入 JSON<input hidden type="file" accept="application/json" data-import></label></div></section>
+      <section class="card settings-section"><div class="settings-heading"><span class="section-icon">${icon("spark")}</span><div><span class="section-caption">OPTIONAL FEATURES</span><h2>可选功能</h2></div></div><div class="toggle-list"><label class="toggle-row"><span><b>遗忘词拼写练习</b><small>在“完全忘记”后追加拼写，不改变评分</small></span><input type="checkbox" data-spelling-toggle ${spellingEnabled ? "checked" : ""}></label><label class="toggle-row"><span><b>Anki 导出</b><small>为已学习词汇生成 UTF-8 TSV 文件</small></span><input type="checkbox" data-anki></label><button type="button" class="soft hidden" data-anki-export>导出 Anki TSV</button></div></section>
+      <section class="card settings-section keymap-section"><div class="settings-heading"><span class="section-icon">${icon("settings")}</span><div><span class="section-caption">KEYBOARD</span><h2>自定义键盘映射</h2></div></div><p class="muted">字母键优先识别物理键位，不受大小写、Shift 或输入法状态影响。</p>${conflicts.length ? '<p class="warning">存在重复键位，请调整映射。</p>' : ""}<div class="keymap-list">${mappings}</div></section>
+    </div>`,
   );
 }
 
@@ -291,7 +264,7 @@ function render() {
 function bind() {
   document.querySelectorAll<HTMLElement>("[data-add-group]").forEach((button) =>
     button.addEventListener("click", () => {
-      const studied = new Set(state.history.map((e) => e.wordId)).size;
+      const studied = new Set(state.history.map((event) => event.wordId)).size;
       state.studyPlan = addExtraGroup(
         state.studyPlan!,
         words.length,
@@ -508,22 +481,19 @@ bindShortcutListener(
   },
 );
 
-// Capture-phase diagnostic — only active with ?debug, fires before any
-// other handler (or browser extension) can intercept the keydown event.
 document.addEventListener(
   "keydown",
-  (e) => {
+  (event) => {
     if (!(window as any).__LEXI_DEBUG__) return;
     const bar = document.getElementById("lexi-key-debug");
     if (!bar) return;
     bar.style.display = "block";
-    bar.textContent = `[raw] key="${e.key}" code="${e.code}" target=${String(e.target?.constructor?.name ?? "?")}`;
-    bar.style.color = "#aaa";
+    bar.textContent = `[raw] key="${event.key}" code="${event.code}" target=${String(event.target?.constructor?.name ?? "?")}`;
+    bar.style.color = "#c4d4cc";
   },
   { capture: true },
 );
 
-// One-time debug bar — lives outside #app so render() can't destroy it
 const debugBar = document.createElement("div");
 debugBar.id = "lexi-key-debug";
 Object.assign(debugBar.style, {
@@ -531,13 +501,13 @@ Object.assign(debugBar.style, {
   bottom: "0",
   left: "0",
   right: "0",
-  background: "#1a1a2e",
-  color: "#ccc",
+  background: "#17241f",
+  color: "#c4d4cc",
   font: "12px monospace",
-  padding: "4px 12px",
+  padding: "5px 12px",
   zIndex: "999",
   display: "none",
-  opacity: "0.9",
+  opacity: "0.96",
 });
 document.body.appendChild(debugBar);
 

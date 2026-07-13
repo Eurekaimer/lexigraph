@@ -9,6 +9,7 @@ Try the public demo at [eurekaimer.icu/lexigraph](https://www.eurekaimer.icu/lex
 - 5,530 syllabus words ordered by corpus frequency
 - Four-level recall feedback and interval scheduling
 - Keyboard-first study with customizable mappings
+- Responsive interface for desktop, tablet, and mobile screens
 - Local JSON profiles with import and export
 - Personal review statistics
 - Goal-based daily quotas with optional 20-word extra groups
@@ -46,16 +47,9 @@ Physical key codes are used when available, so study controls continue to work w
 
 ### Browser extensions
 
-Keyboard-centric browser extensions (Vimium, Tridactyl, Surfingkeys, cVim, and some
-translator or password-manager add-ons) may intercept the A / S / D keys before they
-reach the application.  If the keyboard controls stop responding after visiting a
-deployed page, **disable all extensions** for the site or test in an incognito window
-to rule out conflicts.  The problem does not affect `npm run dev` on localhost because
-most extensions are not active on HTTP origins.
+Keyboard-centric extensions such as Vimium, Tridactyl, Surfingkeys, cVim, and some translator or password-manager add-ons may intercept A / S / D before the keys reach the application. If controls stop responding on the deployed page, disable extensions for the site or test in an incognito window first.
 
-To debug, visit `…/?debug` — a status bar at the bottom of the page will show the
-raw `key` and `code` values for every keypress, making it easy to spot an extension
-that is swallowing events.
+Open the page with `?debug` to show the raw `key` and `code` values for every keypress in a small status bar. This makes extension conflicts easier to identify.
 
 ## Profiles and portability
 
@@ -63,7 +57,7 @@ The local server writes progress to profiles/default.json. Profile files are exc
 
 The Recent Reviews page shows the latest ratings and frequently forgotten words. New review events store the previous scheduling state, allowing the latest accidental rating to be restored exactly.
 
-New words are sampled from five frequency strata, four words per stratum each day. This keeps the daily set stable while mixing common and less familiar vocabulary. Due reviews are interleaved with new material.
+New words are sampled from five frequency strata. This keeps the daily set stable while mixing common and less familiar vocabulary. Due reviews are interleaved with new material, and each optional 20-word group advances the target date according to the current daily rate.
 
 The fourth rating removes a word from automatic review and should be used carefully. It remains visible in review history and can be rated again later.
 
@@ -78,7 +72,7 @@ Anki export is disabled by default. Enable it on the Data page to export studied
     npm test
     npm run build
 
-The main extension points are StorageAdapter for persistence, ExportAdapter for output formats, and Keymap for input bindings. Scheduling, graph construction, and statistics remain independent modules.
+The main extension points are StorageAdapter for persistence, ExportAdapter for output formats, Keymap for input bindings, and the state-free view modules for presentation. Scheduling, graph construction, statistics, and UI rendering remain independent modules.
 
 The vocabulary build is reproducible and pinned to a specific upstream revision. Run npm run prebuild to prepare the dataset.
 
