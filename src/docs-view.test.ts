@@ -15,7 +15,7 @@ describe("documentation view", () => {
     const links = Array.from(
       document.querySelectorAll<HTMLAnchorElement>(".docs-toc a"),
     );
-    expect(links).toHaveLength(7);
+    expect(links).toHaveLength(8);
     for (const link of links) expect(document.querySelector(link.hash)).not.toBeNull();
   });
 
@@ -34,5 +34,12 @@ describe("documentation view", () => {
     );
     expect(chart?.querySelector("title")?.textContent).toContain("记忆曲线");
     expect(chart?.querySelector("desc")?.textContent).toContain("复习间隔");
+  });
+
+  it("documents direct and declarative NixOS installation separately", () => {
+    const text = renderDocs().body.textContent;
+    expect(text).toContain("nix profile install github:Eurekaimer/lexigraph");
+    expect(text).toContain("inputs.lexigraph.nixosModules.default");
+    expect(text).toContain("~/.local/share/lexigraph/profile.json");
   });
 });

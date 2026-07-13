@@ -14,14 +14,15 @@ export function renderDocsView() {
         <a href="#memory"><span>04</span>记忆调度</a>
         <a href="#queue"><span>05</span>每日队列</a>
         <a href="#data"><span>06</span>数据与导出</a>
-        <a href="#workflow"><span>07</span>项目工作流</a>
+        <a href="#terminal"><span>07</span>终端版本</a>
+        <a href="#workflow"><span>08</span>项目工作流</a>
       </nav>
     </aside>
 
     <div class="docs-page">
       <header class="docs-hero" id="overview">
-        <div><span class="docs-version">Lexigraph 0.3</span><h2>把注意力留给单词，<br>把复习时机交给系统。</h2><p>Lexigraph 是面向考研英语大纲词汇的本地优先复习工具。它提供清晰的四级反馈、稳定的每日队列，以及完全属于你的学习数据。</p></div>
-        <dl class="docs-facts"><div><dt>词库</dt><dd>5,530</dd></div><div><dt>数据位置</dt><dd>本地</dd></div><div><dt>核心操作</dt><dd>键盘</dd></div></dl>
+        <div><span class="docs-version">Lexigraph 0.4</span><h2>把注意力留给单词，<br>把复习时机交给系统。</h2><p>Lexigraph 是面向考研英语大纲词汇的本地优先复习工具。它提供清晰的四级反馈、稳定的每日队列，以及完全属于你的学习数据。</p></div>
+        <dl class="docs-facts"><div><dt>词库</dt><dd>5,530</dd></div><div><dt>数据位置</dt><dd>本地</dd></div><div><dt>使用界面</dt><dd>Web / TUI</dd></div></dl>
       </header>
 
       <section class="doc-section" id="quick-start">
@@ -64,10 +65,19 @@ npm run local</code></pre></div>
         <div class="data-cards"><article><h3>JSON 档案</h3><p>包含复习状态、历史、错误记录、学习计划和键位设置，可完整迁移到另一台电脑。</p><span>完整备份 · 推荐</span></article><article><h3>Anki TSV</h3><p>只导出至少学习过一次的词。功能默认关闭，可在“数据设置”中按需启用。</p><span>兼容接口 · 可选</span></article><article><h3>浏览器存储</h3><p>公共 Demo 的数据仅属于当前浏览器；清理站点数据前，请先导出 JSON 备份。</p><span>无需服务器</span></article></div>
       </section>
 
+      <section class="doc-section" id="terminal">
+        <div class="doc-section-heading"><span>07</span><div><p>TERMINAL INTERFACE</p><h2>NixOS 终端版本</h2></div></div>
+        <p class="doc-lead">TUI 使用与网页相同的复习字段和 JSON 档案协议，安装后直接运行 <code>lexigraph</code>。界面围绕键盘流设计，不依赖鼠标。</p>
+        <div class="tui-install-grid"><article><span class="mode-badge">立即体验</span><h3>不修改系统配置</h3><div class="mini-command"><code>nix run github:Eurekaimer/lexigraph</code></div><p>临时构建并运行，不写入用户 profile。</p></article><article class="recommended"><span class="mode-badge">用户安装</span><h3>安装命令</h3><div class="mini-command"><code>nix profile install github:Eurekaimer/lexigraph</code></div><p>安装到当前用户的 Nix profile，无需修改 <code>configuration.nix</code>。</p></article></div>
+        <div class="docs-callout neutral"><b>声明式 NixOS</b><span>在宿主 Flake 中声明 <code>lexigraph.url</code>，传入 <code>inputs</code> 后，在系统模块加入 <code>imports = [ inputs.lexigraph.nixosModules.default ];</code>。来源声明和包安装各自承担不同职责。</span></div>
+        <div class="tui-key-grid" aria-label="终端核心快捷键"><span><kbd>Space</kbd>释义</span><span><kbd>h / l</kbd>选择评分</span><span><kbd>Enter</kbd>提交</span><span><kbd>j / k</kbd>菜单移动</span><span><kbd>m</kbd>操作菜单</span><span><kbd>:</kbd>命令行</span><span><kbd>+</kbd>增加一组</span><span><kbd>z</kbd>撤销</span></div>
+        <p class="doc-note">默认档案位于 <code>~/.local/share/lexigraph/profile.json</code>，采用原子写入和 <code>0600</code> 权限。<a href="https://github.com/Eurekaimer/lexigraph/blob/main/docs/nixos.md">查看完整 NixOS 安装、更新与打包指南</a>。</p>
+      </section>
+
       <section class="doc-section" id="workflow">
-        <div class="doc-section-heading"><span>07</span><div><p>PROJECT WORKFLOW</p><h2>项目工作流</h2></div></div>
-        <p class="doc-lead">业务逻辑、存储适配器、导出接口和界面表现相互分离。每次发布都必须通过测试、类型检查和生产构建。</p>
-        <div class="pipeline"><span><i>01</i>Commit</span><b>→</b><span><i>02</i>Tests</span><b>→</b><span><i>03</i>Build</span><b>→</b><span><i>04</i>Pages</span></div>
+        <div class="doc-section-heading"><span>08</span><div><p>PROJECT WORKFLOW</p><h2>项目工作流</h2></div></div>
+        <p class="doc-lead">业务逻辑、存储适配器、终端状态机和界面表现相互分离。每次发布都必须通过 Go 与 TypeScript 测试、类型检查和生产构建。</p>
+        <div class="pipeline"><span><i>01</i>Commit</span><b>→</b><span><i>02</i>Go + TS Tests</span><b>→</b><span><i>03</i>Build</span><b>→</b><span><i>04</i>Pages</span></div>
         <div class="docs-callout neutral"><b>公共页面的边界</b><span>GitHub Pages 只托管构建后的静态文件。访问者能够修改自己的浏览器数据，但不能修改仓库、词库源文件或你的个人 JSON。</span></div>
       </section>
     </div>

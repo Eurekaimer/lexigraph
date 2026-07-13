@@ -2,4 +2,3 @@ node_modules
 dist
 profiles/*.json
 !profiles/.gitkeep
-public/data/netem.json

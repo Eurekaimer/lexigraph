@@ -42,6 +42,7 @@ import {
   renderSpellingView,
   renderStudyView,
 } from "./study-view";
+import { buildStudyInsights } from "./study-insights";
 import type { Action, Keymap, Rating } from "./types";
 
 // ?debug provides an on-page trace when an extension intercepts study keys.
@@ -123,6 +124,7 @@ function studyView() {
 
   const quota = dailyNewQuota(words.length, state);
   const activity = todayStudyActivity(state);
+  const insights = buildStudyInsights(state);
   return frame(renderStudyView({
     word,
     keymap,
@@ -137,6 +139,7 @@ function studyView() {
     }),
     isNewWord: !state.history.some((event) => event.wordId === word.id),
     answerShown: shown,
+    insights,
   }));
 }
 

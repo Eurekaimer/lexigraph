@@ -16,6 +16,8 @@ Try the public demo at [eurekaimer.icu/lexigraph](https://www.eurekaimer.icu/lex
 - A confusion network based on spelling similarity and mistake history
 - Optional Anki-compatible TSV export
 - Offline-capable PWA demo
+- Native Linux terminal interface with Vim-style navigation
+- Reproducible Nix Flake package and NixOS module
 
 ## Quick start
 
@@ -29,6 +31,48 @@ Node.js 22 or later is required.
 Open [http://127.0.0.1:4173](http://127.0.0.1:4173). Progress is saved automatically to profiles/default.json.
 
 Use npm run dev for frontend development.
+
+## Terminal interface on NixOS
+
+Run the TUI directly from this repository without installing it:
+
+    nix run github:Eurekaimer/lexigraph
+
+Or install the `lexigraph` command into the current user's Nix profile:
+
+    nix profile install github:Eurekaimer/lexigraph
+    lexigraph
+
+This is an imperative user-profile installation. It persists without changing `configuration.nix`, but it is not managed by `nixos-rebuild`.
+
+For a declarative Flake-based NixOS configuration, first declare the source in your host flake:
+
+    inputs.lexigraph.url = "github:Eurekaimer/lexigraph";
+
+Pass `inputs` through `specialArgs`, then add one import to `configuration.nix`:
+
+    imports = [ inputs.lexigraph.nixosModules.default ];
+
+The module adds `lexigraph` to `environment.systemPackages`. See the complete Chinese guide, including non-Flake configuration, updates, removal, and future nixpkgs submission, in [docs/nixos.md](docs/nixos.md).
+
+The TUI profile is stored at `$XDG_DATA_HOME/lexigraph/profile.json`, or `~/.local/share/lexigraph/profile.json` when `XDG_DATA_HOME` is unset. Writes are atomic and use `0600` permissions. Browser-exported JSON profiles can be imported directly.
+
+### TUI controls
+
+| Action | Key |
+| --- | --- |
+| Reveal or hide meaning | Space |
+| Move between ratings | H / L |
+| Submit selected rating | Enter |
+| Direct rating | A / S / D / W |
+| Undo | Z or U |
+| Add a 20-word group | + |
+| Open action menu | M, then J / K and Enter |
+| Open Vim-style command line | : |
+| Study / History / Statistics | 1 / 2 / 3 |
+| Save and quit | Q |
+
+The command line supports `:add`, `:export PATH`, `:import PATH`, `:write`, `:history`, `:stats`, and `:wq`.
 
 ## Keyboard controls
 
@@ -71,8 +115,12 @@ Anki export is disabled by default. Enable it on the Data page to export studied
 
     npm test
     npm run build
+    go test ./...
+    go vet ./...
 
-The main extension points are StorageAdapter for persistence, ExportAdapter for output formats, Keymap for input bindings, and the state-free view modules for presentation. Scheduling, graph construction, statistics, and UI rendering remain independent modules.
+Use `nix develop` to open a shell containing Go and Node.js, or `nix build` to build the installable terminal package.
+
+The main web extension points are StorageAdapter for persistence, ExportAdapter for output formats, Keymap for input bindings, and the state-free view modules for presentation. The Go TUI keeps scheduling, queue construction, profile storage, terminal input, and rendering in separate packages. Both interfaces use the same profile fields and vocabulary source.
 
 The vocabulary build is reproducible and pinned to a specific upstream revision. Run npm run prebuild to prepare the dataset.
 
