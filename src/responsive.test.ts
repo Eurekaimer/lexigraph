@@ -48,4 +48,13 @@ describe("responsive layout contract", () => {
       /@media \(max-width: 960px\)[\s\S]*?\.review-card\s*\{[^}]*grid-column:\s*1 \/ -1/,
     );
   });
+
+  it("expands the documentation canvas while keeping a compact table of contents", () => {
+    expect(styles).toMatch(
+      /\.docs-layout\s*\{[^}]*grid-template-columns:\s*168px minmax\(0, 1fr\)[^}]*max-width:\s*1480px/s,
+    );
+    expect(styles).toMatch(
+      /\.docs-hero h2 span\s*\{[^}]*white-space:\s*nowrap/s,
+    );
+  });
 });

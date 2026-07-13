@@ -6,7 +6,7 @@
 export function renderDocsView() {
   return `<article class="docs-layout">
     <aside class="docs-toc" aria-label="文档目录">
-      <div class="docs-toc-title"><span class="eyebrow">DOCUMENTATION</span><h1>使用文档</h1><p>从第一次启动到数据迁移。</p></div>
+      <div class="docs-toc-title"><span class="eyebrow">DOCUMENTATION</span><h1>项目文档</h1><p>使用方法、调度机制与数据规范。</p></div>
       <nav>
         <a href="#overview"><span>01</span>概览</a>
         <a href="#quick-start"><span>02</span>开始使用</a>
@@ -21,9 +21,21 @@ export function renderDocsView() {
 
     <div class="docs-page">
       <header class="docs-hero" id="overview">
-        <div><span class="docs-version">Lexigraph 0.4</span><h2>把注意力留给单词，<br>把复习时机交给系统。</h2><p>Lexigraph 是面向考研英语大纲词汇的本地优先复习工具。它提供清晰的四级反馈、稳定的每日队列，以及完全属于你的学习数据。</p></div>
+        <div><span class="docs-version">Lexigraph 0.4.0</span><h2><span>专注考研英语词汇，</span><span>系统安排每一次复习。</span></h2><p>Lexigraph 是一套面向考研英语大纲词汇的本地优先学习系统。项目以主动回忆和间隔复习为核心，通过明确的四级反馈、按目标日期生成的每日队列，以及可追溯的学习记录，帮助使用者在有限的备考周期内建立稳定、可持续的词汇复习流程。</p></div>
         <dl class="docs-facts"><div><dt>词库</dt><dd>5,530</dd></div><div><dt>数据位置</dt><dd>本地</dd></div><div><dt>使用界面</dt><dd>Web / TUI</dd></div></dl>
       </header>
+
+      <section class="doc-section docs-overview" aria-labelledby="overview-detail-title">
+        <div class="doc-section-heading"><span>01</span><div><p>PROJECT OVERVIEW</p><h2 id="overview-detail-title">项目概述</h2></div></div>
+        <p class="doc-lead overview-lead">项目并不尝试复刻功能繁复的商业背词软件，而是围绕考研词汇复习中最必要的环节建立一套透明、可控且易于迁移的工作流。词库、调度、学习历史和个人设置彼此分离，使网页界面、终端界面及未来的其他客户端能够共享一致的数据语义。</p>
+        <div class="overview-grid">
+          <article><span>01 / SCOPE</span><h3>明确的学习范围</h3><p>内置 5,530 个考研英语大纲相关词条，保留单词、音标、释义与词频层级。项目聚焦识别和理解，不默认加入发音、例句社区或其他会分散注意力的内容。</p></article>
+          <article><span>02 / SCHEDULING</span><h3>可解释的复习调度</h3><p>每次反馈都会更新熟练度、复习间隔和下次到期时间。新词按照词频分层后交错抽取，避免学习进度长期停留在高频简单词，并让每日任务的难度更加均衡。</p></article>
+          <article><span>03 / OWNERSHIP</span><h3>由使用者掌握的数据</h3><p>学习档案使用结构清晰的 JSON 保存，包含复习状态、历史记录、易混淆关系、学习计划与键位配置。数据无需上传服务器，可以随时导入、导出、备份或迁移。</p></article>
+          <article><span>04 / INTERFACES</span><h3>一致的 Web 与 TUI 体验</h3><p>网页版本适合浏览、检索和统计，终端版本适合在 NixOS 中保持连续的键盘操作。两种界面遵循相同的评分含义和档案协议，不会形成彼此割裂的学习记录。</p></article>
+        </div>
+        <div class="docs-callout neutral overview-boundary"><b>设计边界</b><span>Lexigraph 负责组织词库、记录反馈并安排复习时机，但不会替代阅读、真题训练和语境理解。它的目标是让词汇复习成为一项稳定的基础工作，而不是把学习过程包装成复杂的功能集合。</span></div>
+      </section>
 
       <section class="doc-section" id="quick-start">
         <div class="doc-section-heading"><span>02</span><div><p>GETTING STARTED</p><h2>开始使用</h2></div></div>

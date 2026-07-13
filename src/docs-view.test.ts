@@ -26,6 +26,24 @@ describe("documentation view", () => {
     expect(text).toContain("?debug");
   });
 
+  it("presents the project scope, scheduling, ownership, and interfaces", () => {
+    const document = renderDocs();
+    const cards = document.querySelectorAll(".overview-grid article");
+    expect(cards).toHaveLength(4);
+    const text = document.body.textContent;
+    expect(text).toContain("明确的学习范围");
+    expect(text).toContain("可解释的复习调度");
+    expect(text).toContain("由使用者掌握的数据");
+    expect(text).toContain("一致的 Web 与 TUI 体验");
+  });
+
+  it("keeps the two hero statements as intact semantic lines", () => {
+    const lines = renderDocs().querySelectorAll(".docs-hero h2 > span");
+    expect(lines).toHaveLength(2);
+    expect(lines[0]?.textContent).toBe("专注考研英语词汇，");
+    expect(lines[1]?.textContent).toBe("系统安排每一次复习。");
+  });
+
   it("gives the memory diagram an accessible title and description", () => {
     const document = renderDocs();
     const chart = document.querySelector(".memory-svg");
