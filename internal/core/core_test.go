@@ -59,3 +59,13 @@ func TestExtraGroupIncreasesQuota(t *testing.T) {
 		t.Fatalf("expected quota %d, got %d", base+20, got)
 	}
 }
+
+func TestSetTargetDaysUpdatesPlanDate(t *testing.T) {
+	plan := SetTargetDays(DefaultStudyPlan(fixedNow()), 120, fixedNow())
+	if plan.TargetDate != "2026-11-10" {
+		t.Fatalf("unexpected target date: %s", plan.TargetDate)
+	}
+	if RemainingDays(plan, fixedNow()) != 120 {
+		t.Fatalf("expected 120 remaining days, got %d", RemainingDays(plan, fixedNow()))
+	}
+}

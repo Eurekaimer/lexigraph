@@ -29,6 +29,17 @@ func RemainingDays(plan StudyPlan, now time.Time) int {
 	return days
 }
 
+func SetTargetDays(plan StudyPlan, days int, now time.Time) StudyPlan {
+	if days < 1 {
+		days = 1
+	}
+	if plan.ExtraGroups == nil {
+		plan.ExtraGroups = make(map[string]int)
+	}
+	plan.TargetDate = DateKey(now.AddDate(0, 0, days))
+	return plan
+}
+
 func DailyNewQuota(totalWords int, state State, now time.Time) int {
 	plan := state.StudyPlan
 	if plan == nil {

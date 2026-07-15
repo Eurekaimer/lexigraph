@@ -72,7 +72,7 @@ The TUI profile is stored at `$XDG_DATA_HOME/lexigraph/profile.json`, or `~/.loc
 | Study / History / Statistics | 1 / 2 / 3 |
 | Save and quit | Q |
 
-The command line supports `:add`, `:export PATH`, `:import PATH`, `:write`, `:history`, `:stats`, and `:wq`.
+The command line supports `:days N`, `:add`, `:export PATH`, `:import PATH`, `:write`, `:history`, `:stats`, and `:wq`.
 
 ## Keyboard controls
 

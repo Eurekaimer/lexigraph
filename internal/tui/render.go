@@ -34,9 +34,94 @@ func (app *App) todayActivity() (int, int) {
 	return newWords, reviews
 }
 
+func (app *App) dueReviewCount(now time.Time) int {
+	total := 0
+	for _, review := range app.Document.State.Reviews {
+		if review.Mastered {
+			continue
+		}
+		dueAt, err := time.Parse(time.RFC3339Nano, review.Due)
+		if err != nil || !dueAt.After(now) {
+			total++
+		}
+	}
+	return total
+}
+
+func (app *App) dueBuckets(now time.Time) (int, int, int, int) {
+	today, _ := time.Parse("2006-01-02", core.DateKey(now))
+	tomorrow := today.AddDate(0, 0, 1)
+	weekEnd := today.AddDate(0, 0, 7)
+	todayCount, tomorrowCount, weekCount, mastered := 0, 0, 0, 0
+	for _, review := range app.Document.State.Reviews {
+		if review.Mastered {
+			mastered++
+			continue
+		}
+		dueAt, err := time.Parse(time.RFC3339Nano, review.Due)
+		if err != nil {
+			todayCount++
+			weekCount++
+			continue
+		}
+		dueDay, _ := time.Parse("2006-01-02", core.DateKey(dueAt))
+		switch {
+		case !dueDay.After(today):
+			todayCount++
+			weekCount++
+		case dueDay.Equal(tomorrow):
+			tomorrowCount++
+			weekCount++
+		case dueDay.Before(weekEnd) || dueDay.Equal(weekEnd):
+			weekCount++
+		}
+	}
+	return todayCount, tomorrowCount, weekCount, mastered
+}
+
+func intervalLabel(days float64) string {
+	switch {
+	case days <= 0:
+		return "现在"
+	case days < 1:
+		minutes := int(days*24*60 + 0.5)
+		if minutes < 1 {
+			minutes = 1
+		}
+		if minutes >= 60 {
+			return fmt.Sprintf("%d 小时", int(float64(minutes)/60+0.5))
+		}
+		return fmt.Sprintf("%d 分钟", minutes)
+	case days < 2:
+		return "1 天"
+	case days < 30:
+		return fmt.Sprintf("%.0f 天", days)
+	case days < 365:
+		return fmt.Sprintf("%.1f 月", days/30)
+	default:
+		return fmt.Sprintf("%.1f 年", days/365)
+	}
+}
+
+func nextIntervalLabel(previous core.Review, rating core.Rating, now time.Time) string {
+	if rating == core.Mastered {
+		return "移出复习"
+	}
+	next := core.Schedule(previous, rating, now)
+	return intervalLabel(next.Interval)
+}
+
+func (app *App) plan() core.StudyPlan {
+	if app.Document.State.StudyPlan != nil {
+		return *app.Document.State.StudyPlan
+	}
+	return core.DefaultStudyPlan(app.now())
+}
+
 func (app *App) leftPanel(width, height int) []string {
 	newWords, reviews := app.todayActivity()
 	quota := core.DailyNewQuota(len(app.Words), app.Document.State, app.now())
+	dueReviews := app.dueReviewCount(app.now())
 	barWidth := max(8, width-8)
 	content := []string{
 		accent(" TODAY") + muted("  "+app.now().Format("01月02日")),
@@ -47,6 +132,8 @@ func (app *App) leftPanel(width, height int) []string {
 		"",
 		muted(" 当前队列"),
 		" " + strong(fmt.Sprintf("%d", len(app.Queue))),
+		muted(" 已到期复习"),
+		" " + strong(fmt.Sprintf("%d", dueReviews)),
 		muted(" 今日复习"),
 		" " + strong(fmt.Sprintf("%d", reviews)),
 		"",
@@ -59,17 +146,20 @@ func (app *App) leftPanel(width, height int) []string {
 }
 
 func (app *App) rightPanel(width, height int) []string {
-	plan := app.Document.State.StudyPlan
-	remaining := 0
+	plan := app.plan()
+	remaining := core.RemainingDays(plan, app.now())
 	quota := core.DailyNewQuota(len(app.Words), app.Document.State, app.now())
-	if plan != nil {
-		remaining = core.RemainingDays(*plan, app.now())
-	}
+	learned := app.Document.State.LearnedWords()
+	remainingWords := max(0, len(app.Words)-learned)
+	extraGroups := plan.ExtraGroups[core.DateKey(app.now())]
 	content := []string{
 		accent(" DAILY PLAN"),
 		"",
 		" " + strong(fmt.Sprintf("%d 个新词", quota)),
-		" " + muted(fmt.Sprintf("距离目标还有 %d 天", remaining)),
+		" " + muted(fmt.Sprintf("%d 天内完成", remaining)),
+		" " + muted("目标日期 ") + strong(plan.TargetDate),
+		" " + muted(fmt.Sprintf("剩余词汇 %d", remainingWords)),
+		" " + muted(fmt.Sprintf("今日加组 +%d", extraGroups*20)),
 		"",
 		muted("────────────────────"),
 		accent(" MEMORY"),
@@ -124,6 +214,18 @@ func (app *App) studyContent(width, height int) []string {
 	if phonetic == "" {
 		phonetic = "暂缺音标"
 	}
+	review := app.Document.State.Reviews[word.ID]
+	preview := fmt.Sprintf(
+		"A %s · S %s · D %s · W %s",
+		nextIntervalLabel(review, core.Forgot, app.now()),
+		nextIntervalLabel(review, core.Hard, app.now()),
+		nextIntervalLabel(review, core.Good, app.now()),
+		nextIntervalLabel(review, core.Mastered, app.now()),
+	)
+	currentInterval := "首次学习"
+	if review.Repetitions > 0 || review.Interval > 0 {
+		currentInterval = "当前间隔 " + intervalLabel(review.Interval)
+	}
 	lines := []string{
 		center(accent("ENGLISH WORD"), width),
 		"",
@@ -131,6 +233,9 @@ func (app *App) studyContent(width, height int) []string {
 		center(accent(phonetic), width),
 		"",
 		center(answer, width),
+		"",
+		center(muted(currentInterval), width),
+		center(muted("下次复习：")+accent(preview), width),
 		"",
 		center(muted("Space 切换释义 · h/l 选择 · Enter 提交"), width),
 		"",
@@ -188,43 +293,147 @@ func (app *App) historyContent(width, height int) []string {
 	return content
 }
 
-func (app *App) statsContent(width, height int) []string {
-	state := app.Document.State
-	content := []string{
-		accent("LEARNING INSIGHTS"),
-		"",
-		strong(fmt.Sprintf("%-12s %d", "累计复习", len(state.History))),
-		strong(fmt.Sprintf("%-12s %d", "已学习词汇", state.LearnedWords())),
-		strong(fmt.Sprintf("%-12s %s", "正常掌握", percent(state.RecallRate()))),
-		strong(fmt.Sprintf("%-12s %d", "累计遗忘", state.TotalLapses())),
-		"",
-		muted("最近 14 天"),
+func monthName(month time.Month) string {
+	names := [...]string{"Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"}
+	return names[int(month)-1]
+}
+
+func heatLevel(count, peak int) int {
+	if count <= 0 {
+		return 0
 	}
-	counts := make([]int, 14)
-	start := app.now().UTC().AddDate(0, 0, -13)
-	for _, event := range state.History {
+	if peak < 1 {
+		peak = 1
+	}
+	level := 1 + count*4/peak
+	if level > 4 {
+		level = 4
+	}
+	return level
+}
+
+func heatCell(count, peak int) string {
+	switch heatLevel(count, peak) {
+	case 0:
+		return ansi("38;2;45;56;50", "■")
+	case 1:
+		return ansi("38;2;49;95;68", "■")
+	case 2:
+		return ansi("38;2;69;139;91", "■")
+	case 3:
+		return ansi("38;2;102;168;137", "■")
+	default:
+		return ansi("38;2;154;201;176", "■")
+	}
+}
+
+func (app *App) heatmapLines(width int, now time.Time) []string {
+	weeks := min(53, max(16, width-5))
+	today, _ := time.Parse("2006-01-02", core.DateKey(now))
+	end := today.AddDate(0, 0, 6-int(today.Weekday()))
+	start := end.AddDate(0, 0, -(weeks*7 - 1))
+	counts := make(map[string]int)
+	for _, event := range app.Document.State.History {
 		parsed, err := time.Parse(time.RFC3339Nano, event.Date)
 		if err != nil {
 			continue
 		}
-		index := int(parsed.UTC().Truncate(24*time.Hour).Sub(start.Truncate(24*time.Hour)).Hours() / 24)
-		if index >= 0 && index < len(counts) {
-			counts[index]++
-		}
+		counts[core.DateKey(parsed)]++
 	}
 	peak := 1
 	for _, count := range counts {
 		peak = max(peak, count)
 	}
-	blocks := []rune("▁▂▃▄▅▆▇█")
-	var chart strings.Builder
-	for _, count := range counts {
-		level := count * (len(blocks) - 1) / peak
-		chart.WriteRune(blocks[level])
-		chart.WriteRune(' ')
+
+	monthRow := []rune(strings.Repeat(" ", weeks))
+	lastMonth := time.Month(0)
+	for week := 0; week < weeks; week++ {
+		date := start.AddDate(0, 0, week*7)
+		if date.After(today) {
+			continue
+		}
+		if date.Month() != lastMonth && date.Day() <= 7 {
+			label := monthName(date.Month())
+			for offset, r := range label {
+				if week+offset < len(monthRow) {
+					monthRow[week+offset] = r
+				}
+			}
+			lastMonth = date.Month()
+		}
 	}
-	content = append(content, accent(chart.String()), muted("每一列代表一天，颜色高度表示复习量。"))
-	return padVertical(content, height)
+
+	lines := []string{"    " + muted(string(monthRow))}
+	labels := []string{"Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"}
+	for day := 0; day < 7; day++ {
+		var row strings.Builder
+		row.WriteString(muted(labels[day] + " "))
+		for week := 0; week < weeks; week++ {
+			date := start.AddDate(0, 0, week*7+day)
+			if date.After(today) {
+				row.WriteByte(' ')
+				continue
+			}
+			row.WriteString(heatCell(counts[core.DateKey(date)], peak))
+		}
+		lines = append(lines, row.String())
+	}
+	legend := muted("Less ") + heatCell(0, peak) + heatCell(1, peak) + heatCell(max(2, peak/3), peak) + heatCell(max(3, peak*2/3), peak) + heatCell(peak, peak) + muted(" More")
+	lines = append(lines, "    "+legend)
+	return lines
+}
+
+func metricLine(width int, pairs ...[2]string) string {
+	if len(pairs) == 0 {
+		return ""
+	}
+	gap := 2
+	segmentWidth := max(14, (width-gap*(len(pairs)-1))/len(pairs))
+	segments := make([]string, 0, len(pairs))
+	for _, pair := range pairs {
+		segments = append(segments, padRight(strong(pair[0])+" "+muted(pair[1]), segmentWidth))
+	}
+	return truncate(strings.Join(segments, strings.Repeat(" ", gap)), width)
+}
+
+func (app *App) statsContent(width, height int) []string {
+	state := app.Document.State
+	plan := app.plan()
+	remaining := core.RemainingDays(plan, app.now())
+	quota := core.DailyNewQuota(len(app.Words), state, app.now())
+	todayDue, tomorrowDue, weekDue, _ := app.dueBuckets(app.now())
+	content := []string{
+		accent("LEARNING INSIGHTS"),
+		"",
+		metricLine(width,
+			[2]string{fmt.Sprintf("%d", len(state.History)), "累计复习"},
+			[2]string{fmt.Sprintf("%d", state.LearnedWords()), "已学习"},
+			[2]string{percent(state.RecallRate()), "正常掌握"},
+			[2]string{fmt.Sprintf("%d", state.TotalLapses()), "累计遗忘"},
+		),
+		metricLine(width,
+			[2]string{fmt.Sprintf("%d", quota), "每日新词"},
+			[2]string{fmt.Sprintf("%d", remaining), "剩余天数"},
+			[2]string{plan.TargetDate, "目标日期"},
+		),
+		"",
+		accent("LAST 365 DAYS") + muted("  GitHub-style review activity"),
+	}
+	content = append(content, app.heatmapLines(width, app.now())...)
+	content = append(content,
+		"",
+		accent("UPCOMING REVIEWS"),
+		metricLine(width,
+			[2]string{fmt.Sprintf("%d", todayDue), "今天到期"},
+			[2]string{fmt.Sprintf("%d", tomorrowDue), "明天到期"},
+			[2]string{fmt.Sprintf("%d", weekDue), "7 天内"},
+		),
+		muted("评分间隔：A 约 30 分钟；S 保守延长；D 1 天、3 天后按熟练度延长；W 移出自动复习。"),
+	)
+	for len(content) < height {
+		content = append(content, "")
+	}
+	return content
 }
 
 func helpContent(width, height int) []string {
@@ -247,6 +456,7 @@ func helpContent(width, height int) []string {
 		"",
 		strong("命令"),
 		"  :add                  增加一组",
+		"  :days 120             设置多少天内学完",
 		"  :export [路径]        导出 JSON",
 		"  :import <路径>        导入网页或 TUI 档案",
 		"  :write / :w           立即保存",

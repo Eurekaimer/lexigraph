@@ -56,6 +56,19 @@ func TestMenuUsesJKAndExecutesAddGroup(t *testing.T) {
 	}
 }
 
+func TestDaysCommandUpdatesPlan(t *testing.T) {
+	app := testApp(t)
+	app.Command = "days 120"
+	app.Overlay = CommandOverlay
+	app.Handle(Key{Name: "enter"})
+	if got := app.Document.State.StudyPlan.TargetDate; got != "2026-11-10" {
+		t.Fatalf("unexpected target date: %s", got)
+	}
+	if !strings.Contains(app.Status, "120 天内完成") {
+		t.Fatalf("status did not explain the plan update: %s", app.Status)
+	}
+}
+
 func TestCommandExportAndResponsiveRender(t *testing.T) {
 	app := testApp(t)
 	exportPath := filepath.Join(t.TempDir(), "backup.json")
@@ -76,5 +89,17 @@ func TestCommandExportAndResponsiveRender(t *testing.T) {
 	view = app.Render()
 	if strings.Contains(view, "╭ 今日 ") || strings.Contains(view, "╭ 计划 ") {
 		t.Fatal("compact render retained desktop sidebars")
+	}
+}
+
+func TestStatsRenderShowsPlanHeatmapAndReviewBuckets(t *testing.T) {
+	app := testApp(t)
+	app.Screen = StatsScreen
+	app.Width, app.Height = 100, 34
+	view := app.Render()
+	for _, expected := range []string{"LAST 365 DAYS", "UPCOMING REVIEWS", "每日新词", "目标日期", "评分间隔"} {
+		if !strings.Contains(view, expected) {
+			t.Fatalf("stats render omitted %q", expected)
+		}
 	}
 }

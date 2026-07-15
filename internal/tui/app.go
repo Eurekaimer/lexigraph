@@ -3,6 +3,7 @@ package tui
 import (
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 	"unicode"
@@ -50,6 +51,7 @@ type App struct {
 var menuEntries = []string{
 	"继续学习",
 	"增加一组新词  +20",
+	"设置完成天数…",
 	"导出 JSON",
 	"导入 JSON…",
 	"撤销上次评分",
@@ -147,6 +149,23 @@ func (app *App) addGroup() {
 	app.status("今日计划已增加 20 个新词。")
 }
 
+func (app *App) setTargetDays(days int) {
+	plan := app.Document.State.StudyPlan
+	if plan == nil {
+		fallback := core.DefaultStudyPlan(app.now())
+		plan = &fallback
+	}
+	updated := core.SetTargetDays(*plan, days, app.now())
+	app.Document.State.StudyPlan = &updated
+	app.refresh()
+	if err := app.save(); err != nil {
+		app.status("计划已更新，但保存失败：" + err.Error())
+		return
+	}
+	quota := core.DailyNewQuota(len(app.Words), app.Document.State, app.now())
+	app.status(fmt.Sprintf("计划已更新：%d 天内完成，每天约 %d 个新词。", core.RemainingDays(updated, app.now()), quota))
+}
+
 func defaultExportPath() string {
 	path, err := profile.ExpandPath("~/lexigraph-profile.json")
 	if err != nil {
@@ -192,17 +211,20 @@ func (app *App) executeMenu() {
 	case 1:
 		app.addGroup()
 	case 2:
-		app.export("")
+		app.Overlay = CommandOverlay
+		app.Command = "days "
 	case 3:
+		app.export("")
+	case 4:
 		app.Overlay = CommandOverlay
 		app.Command = "import "
-	case 4:
-		app.undo()
 	case 5:
-		app.Screen = StatsScreen
+		app.undo()
 	case 6:
-		app.Screen = HelpScreen
+		app.Screen = StatsScreen
 	case 7:
+		app.Screen = HelpScreen
+	case 8:
 		_ = app.save()
 		app.Quit = true
 	}
@@ -229,6 +251,13 @@ func (app *App) executeCommand() {
 		app.Screen = StudyScreen
 	case "add", "+":
 		app.addGroup()
+	case "days", "plan", "target":
+		days, err := strconv.Atoi(argument)
+		if err != nil || days < 1 {
+			app.status("用法：:days 120  （设置多少天内学完剩余词）")
+		} else {
+			app.setTargetDays(days)
+		}
 	case "undo", "u":
 		app.undo()
 	case "write", "w":
